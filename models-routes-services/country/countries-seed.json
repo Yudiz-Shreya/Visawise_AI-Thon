@@ -1,0 +1,28 @@
+[
+  {
+    "sName": "Australia",
+    "sCode": "AU",
+    "eStatus": "Y"
+  },
+  {
+    "sName": "Japan",
+    "sCode": "JP",
+    "eStatus": "Y"
+  },
+  {
+    "sName": "United States",
+    "sCode": "US",
+    "eStatus": "Y"
+  },
+  {
+    "sName": "France",
+    "sCode": "FR",
+    "eStatus": "Y"
+  },
+  {
+    "sName": "United Kingdom",
+    "sCode": "GB",
+    "eStatus": "Y"
+  }
+]
+

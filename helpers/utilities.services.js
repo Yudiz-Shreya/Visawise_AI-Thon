@@ -1,8 +1,8 @@
-const { status } = require('http-status')
+const { status } = require('./api.responses')
 const catchError = (name, error, req, res) => {
   handleCatchError(error)
-  return res.status(status.INTERNAL_SERVER_ERROR).json({
-    status: status.INTERNAL_SERVER_ERROR,
+  return res.status(status.InternalServerError).json({
+    status: status.InternalServerError,
     message: 'Something went wrong'
   })
 }
