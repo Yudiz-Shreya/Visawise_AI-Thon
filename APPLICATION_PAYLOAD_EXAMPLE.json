@@ -1,0 +1,61 @@
+{
+    "userId": "507f1f77bcf86cd799439011",
+    "countryId": "69589f26a9c370e5771451ca",
+    "visaTypeId": "507f1f77bcf86cd799439012",
+    "documents": [
+      {
+        "sDocumentType": "passport_photo",
+        "sS3Key": "visawise/applications/passport_photo/1767417547229_passport-photo.jpg",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/passport_photo/1767417547229_passport-photo.jpg"
+      },
+      {
+        "sDocumentType": "visa_application_form",
+        "sS3Key": "visawise/applications/visa_application_form/1767417547247_visa-application-form.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/visa_application_form/1767417547247_visa-application-form.pdf"
+      },
+      {
+        "sDocumentType": "cover_letter",
+        "sS3Key": "visawise/applications/cover_letter/1767417547250_cover-letter.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/cover_letter/1767417547250_cover-letter.pdf"
+      },
+      {
+        "sDocumentType": "accommodation_proof",
+        "sS3Key": "visawise/applications/accommodation_proof/1767417547252_accommodation-proof.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/accommodation_proof/1767417547252_accommodation-proof.pdf"
+      },
+      {
+        "sDocumentType": "bank_statements",
+        "sS3Key": "visawise/applications/bank_statements/1767417547253_bank-statements-last-6-months.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/bank_statements/1767417547253_bank-statements-last-6-months.pdf"
+      },
+      {
+        "sDocumentType": "income_proof",
+        "sS3Key": "visawise/applications/income_proof/1767417547255_income-proof.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/income_proof/1767417547255_income-proof.pdf"
+      },
+      {
+        "sDocumentType": "itr",
+        "sS3Key": "visawise/applications/itr/1767417547256_income-tax-returns-last-2-years.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/itr/1767417547256_income-tax-returns-last-2-years.pdf"
+      },
+      {
+        "sDocumentType": "leisure_proof",
+        "sS3Key": "visawise/applications/leisure_proof/1767417547258_itinerary.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/leisure_proof/1767417547258_itinerary.pdf"
+      },
+      {
+        "sDocumentType": "return_ticket",
+        "sS3Key": "visawise/applications/return_ticket/1767417547259_return-ticket.pdf",
+        "sS3Url": "https://fastttlink-media.s3.ap-south-1.amazonaws.com/visawise/applications/return_ticket/1767417547259_return-ticket.pdf"
+      }
+    ],
+    "applicationData": {
+      "sPassportNumber": "A1234567",
+      "dPassportExpiry": "2025-12-31",
+      "sEmploymentStatus": "Employed",
+      "sTravelDates": "01/12/2024 - 15/12/2024",
+      "sCoverLetter": "I am planning to visit Australia for tourism purposes..."
+    }
+  }
+  
+  

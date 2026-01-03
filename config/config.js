@@ -4,9 +4,10 @@ const config = {
   DB_POOLSIZE: process.env.DB_POOLSIZE || 10,
   AWS_ACCESS_KEY: process.env.AWS_ACCESS_KEY,
   AWS_SECRET_KEY: process.env.AWS_SECRET_KEY,
-  AWS_REGION: process.env.AWS_REGION || 'us-east-1',
+  AWS_REGION: process.env.AWS_REGION || 'ap-south-1',
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
   S3_BUCKET_URL: process.env.S3_BUCKET_URL,
+  S3_PROJECT_FOLDER: process.env.S3_PROJECT_FOLDER || 'visawise/',
   OCR_PROVIDER: process.env.OCR_PROVIDER || 'TEST'
 }
 

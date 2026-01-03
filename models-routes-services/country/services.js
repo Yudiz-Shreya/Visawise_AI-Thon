@@ -3,7 +3,7 @@ const Country = require('./models')
 const VisaType = require('./visatype.model')
 const Application = require('./application.model')
 const { catchError } = require('../../helpers/utilities.services')
-const { getPreSignedUrl, checkValidFileType } = require('../../helpers/s3.service')
+const { signedUrl, checkValidFileType } = require('../../helpers/s3.service')
 const { validateDocument } = require('../../helpers/ocr.service')
 
 function extractDatesFromText(text) {
@@ -222,7 +222,7 @@ class CountryService {
         }
 
         const path = `applications/${sDocumentType}/`
-        const response = await getPreSignedUrl(sFileName, sContentType, path)
+        const response = await signedUrl(sFileName, sContentType, path)
         data.push({
           sDocumentType,
           sFileName,

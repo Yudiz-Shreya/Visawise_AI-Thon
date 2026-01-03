@@ -1,0 +1,55 @@
+{
+  "aDocuments": [
+    {
+      "sFileName": "passport-photo-1.jpg",
+      "sContentType": "image/jpeg",
+      "sDocumentType": "passport_photo"
+    },
+    {
+      "sFileName": "passport-photo-2.jpg",
+      "sContentType": "image/jpeg",
+      "sDocumentType": "passport_photo"
+    },
+    {
+      "sFileName": "visa-application-form.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "visa_application_form"
+    },
+    {
+      "sFileName": "cover-letter.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "cover_letter"
+    },
+    {
+      "sFileName": "accommodation-proof.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "accommodation_proof"
+    },
+    {
+      "sFileName": "bank-statement-jan-jun.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "bank_statements"
+    },
+    {
+      "sFileName": "income-proof.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "income_proof"
+    },
+    {
+      "sFileName": "income-tax-returns-2022-2023.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "itr"
+    },
+    {
+      "sFileName": "itinerary.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "leisure_proof"
+    },
+    {
+      "sFileName": "return-ticket.pdf",
+      "sContentType": "application/pdf",
+      "sDocumentType": "return_ticket"
+    }
+  ]
+}
+
