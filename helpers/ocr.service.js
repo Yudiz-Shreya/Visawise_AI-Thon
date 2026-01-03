@@ -2,6 +2,7 @@ const { createWorker } = require('tesseract.js')
 const { s3Client } = require('./s3.service')
 const { GetObjectCommand } = require('@aws-sdk/client-s3')
 const config = require('../config/config')
+const pdf = require('pdf-parse')
 
 async function extractTextFromS3(s3Key) {
   try {
@@ -22,23 +23,31 @@ async function extractTextFromS3(s3Key) {
     const isPdf = fileExtension === 'pdf'
 
     if (isImage) {
-      const worker = await createWorker('eng')
-      const { data: { text } } = await worker.recognize(fileBuffer)
-      await worker.terminate()
-      return text
+      try {
+        const worker = await createWorker('eng')
+        const { data: { text } } = await worker.recognize(fileBuffer)
+        await worker.terminate()
+        return text || ''
+      } catch (error) {
+        console.error('OCR error for image:', error)
+        throw new Error(`Failed to extract text from image: ${error.message}`)
+      }
     } else if (isPdf) {
       try {
-        const pdfText = fileBuffer.toString('utf-8')
-        if (pdfText.length > 100) {
-          return pdfText
+        const pdfData = await pdf(fileBuffer)
+        const extractedText = pdfData.text || ''
+        if (extractedText.trim().length > 0) {
+          return extractedText
         }
+        console.log('PDF has no extractable text, trying OCR on first page...')
+        const worker = await createWorker('eng')
+        const { data: { text } } = await worker.recognize(fileBuffer)
+        await worker.terminate()
+        return text || ''
       } catch (error) {
-        console.log('PDF text extraction failed, trying OCR on PDF...')
+        console.error('PDF extraction error:', error)
+        throw new Error(`Failed to extract text from PDF: ${error.message}`)
       }
-      const worker = await createWorker('eng')
-      const { data: { text } } = await worker.recognize(fileBuffer)
-      await worker.terminate()
-      return text
     } else {
       return fileBuffer.toString('utf-8')
     }
@@ -50,10 +59,20 @@ async function extractTextFromS3(s3Key) {
 
 async function validateDocument(documentType, s3Key) {
   try {
-    if (process.env.NODE_ENV !== 'production' || config.OCR_PROVIDER === 'TEST') {
+    if (config.OCR_PROVIDER === 'TEST') {
       return {
         isValid: true,
         reason: 'Document validated successfully (test mode)',
+        extractedData: {
+          fullText: 'Test mode - no text extracted'
+        }
+      }
+    }
+
+    if (!s3Key) {
+      return {
+        isValid: false,
+        reason: 'S3 key is missing',
         extractedData: {}
       }
     }
@@ -64,12 +83,14 @@ async function validateDocument(documentType, s3Key) {
       return {
         isValid: false,
         reason: `Could not extract text from ${documentType}. Please ensure the document is clear and readable.`,
-        extractedData: {}
+        extractedData: {
+          fullText: ''
+        }
       }
     }
 
     const extractedData = {
-      fullText: extractedText
+      fullText: extractedText.trim()
     }
 
     return {
@@ -78,11 +99,14 @@ async function validateDocument(documentType, s3Key) {
       extractedData
     }
   } catch (error) {
-    console.error('OCR validation error:', error)
+    console.error('OCR validation error for', documentType, ':', error)
     return {
       isValid: false,
-      reason: `Error validating document: ${error.message}`,
-      extractedData: {}
+      reason: `Could not extract text from ${documentType}. ${error.message || 'Please ensure the document is clear and readable.'}`,
+      extractedData: {
+        fullText: '',
+        error: error.message
+      }
     }
   }
 }

@@ -217,9 +217,9 @@ async function validateTravelDates(application, documents) {
   const hasMatchingDate = normalizedCoverDates.some(coverDate => {
     if (!coverDate) return false
     return coverDate.includes(normalizedTravelStart) ||
-           coverDate.includes(normalizedTravelEnd) ||
-           normalizedTravelStart.includes(coverDate) ||
-           normalizedTravelEnd.includes(coverDate)
+      coverDate.includes(normalizedTravelEnd) ||
+      normalizedTravelStart.includes(coverDate) ||
+      normalizedTravelEnd.includes(coverDate)
   })
 
   if (!hasMatchingDate) {
