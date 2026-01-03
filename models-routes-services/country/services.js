@@ -11,17 +11,37 @@ function extractDatesFromText(text) {
   const datePatterns = [
     /\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b/g,
     /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\b/gi,
-    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{2,4})\b/gi
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{2,4})\b/gi,
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\b/gi,
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{2,4})\b/gi,
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\b/gi,
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\b/gi,
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\b/gi,
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{2,4})\b/gi
   ]
 
   const dates = []
   datePatterns.forEach(pattern => {
     const matches = text.matchAll(pattern)
     for (const match of matches) {
-      dates.push(match[0])
+      if (match[0]) {
+        dates.push(match[0])
+        // For date ranges like "9th to 16th March 2026", extract individual dates
+        if (match.length >= 5 && match[1] && match[3] && match[4]) {
+          const month = match[3]
+          const year = match[4]
+          dates.push(`${match[1]} ${month} ${year}`)
+          dates.push(`${match[2]} ${month} ${year}`)
+        }
+        // For date ranges like "March 9th to 16th March 2026"
+        if (match.length >= 6 && match[1] && match[2] && match[4] && match[5]) {
+          dates.push(`${match[1]} ${match[2]} ${match[5]}`)
+          dates.push(`${match[4]} ${match[5]}`)
+        }
+      }
     }
   })
-  return dates
+  return [...new Set(dates)]
 }
 
 function parseTravelDates(travelDatesString) {
@@ -56,6 +76,37 @@ function normalizeDate(dateString) {
 
 function parseDate(dateString) {
   if (!dateString) return null
+
+  // Handle month names with ordinals: "9th March 2026", "March 9th, 2026"
+  const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+  const monthPattern = new RegExp(`(?:^|\\s)(${monthNames.join('|')})\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{2,4})`, 'i')
+  const monthPattern2 = new RegExp(`(?:^|\\s)(\\d{1,2})(?:st|nd|rd|th)?\\s+(${monthNames.join('|')})\\s+(\\d{2,4})`, 'i')
+
+  let match = dateString.match(monthPattern)
+  if (match) {
+    const monthName = match[1].toLowerCase()
+    const monthIndex = monthNames.indexOf(monthName)
+    const day = parseInt(match[2], 10)
+    let year = parseInt(match[3], 10)
+    if (year < 100) year += 2000
+    if (monthIndex >= 0 && day >= 1 && day <= 31) {
+      return new Date(year, monthIndex, day)
+    }
+  }
+
+  match = dateString.match(monthPattern2)
+  if (match) {
+    const day = parseInt(match[1], 10)
+    const monthName = match[2].toLowerCase()
+    const monthIndex = monthNames.indexOf(monthName)
+    let year = parseInt(match[3], 10)
+    if (year < 100) year += 2000
+    if (monthIndex >= 0 && day >= 1 && day <= 31) {
+      return new Date(year, monthIndex, day)
+    }
+  }
+
+  // Handle numeric formats: DD/MM/YYYY, MM/DD/YYYY, YYYY/MM/DD
   const formats = [
     /(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/,
     /(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})/
@@ -65,19 +116,34 @@ function parseDate(dateString) {
     if (match) {
       let day, month, year
       if (match[3] && match[3].length === 4) {
-        day = parseInt(match[1], 10)
+        // YYYY/MM/DD format
+        year = parseInt(match[1], 10)
         month = parseInt(match[2], 10)
-        year = parseInt(match[3], 10)
+        day = parseInt(match[3], 10)
       } else {
         day = parseInt(match[1], 10)
         month = parseInt(match[2], 10)
         year = parseInt(match[3], 10)
         if (year < 100) year += 2000
+
+        // Try to determine format: if month > 12, swap day and month
+        // Also check if it's likely DD/MM (common in international formats)
+        // For dates like 1/10/2026, assume DD/MM if day <= 12 and month <= 12
+        if (month > 12 && day <= 12) {
+          [day, month] = [month, day]
+        } else if (day > 12 && month <= 12) {
+          // Keep as is (DD/MM format)
+        } else if (day <= 12 && month <= 12) {
+          // Ambiguous: try both formats, prefer DD/MM for international
+          // But if day > month, likely MM/DD, so swap
+          if (day > month) {
+            [day, month] = [month, day]
+          }
+        }
       }
-      if (month > 12) {
-        [day, month] = [month, day]
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return new Date(year, month - 1, day)
       }
-      return new Date(year, month - 1, day)
     }
   }
   return null
@@ -92,7 +158,22 @@ async function validatePassportExpiry(application, documents = []) {
 
   // Check if passport expiry is at least 6 months from current date
   if (passportExpiry) {
-    const expiryDate = passportExpiry instanceof Date ? passportExpiry : new Date(passportExpiry)
+    let expiryDate = passportExpiry instanceof Date ? passportExpiry : new Date(passportExpiry)
+
+    // Handle invalid dates
+    if (isNaN(expiryDate.getTime())) {
+      // Try parsing as string if Date constructor failed
+      const dateStr = passportExpiry.toString()
+      const parsed = parseDate(dateStr)
+      if (parsed) {
+        expiryDate = parsed
+      } else {
+        return {
+          bIsValid: false,
+          sReason: `Invalid passport expiry date format: ${passportExpiry}`
+        }
+      }
+    }
 
     if (expiryDate < sixMonthsFromNow) {
       return {
@@ -248,10 +329,7 @@ async function validateTravelDates(application, documents) {
     return { bIsValid: true, sReason: 'Cover letter not found or not uploaded' }
   }
 
-  if (!coverLetterDoc.oValidationResult?.bIsValid) {
-    return { bIsValid: false, sReason: 'Cover letter validation failed. Please upload a valid cover letter.' }
-  }
-
+  // Always check extracted text, even if OCR validation failed
   const extractedData = coverLetterDoc.oValidationResult?.oExtractedData || {}
   const coverLetterText = extractedData.fullText || ''
 
@@ -1275,6 +1353,89 @@ async function validateAcademicCertificate(documents) {
   return { bIsValid: true, sReason: 'Academic certificate is valid' }
 }
 
+async function validateNOC(documents, application = null) {
+  const nocDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'noc'
+  )
+
+  if (!nocDoc || !nocDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'NOC (No Objection Certificate) is required for Tourist visa' }
+  }
+
+  // Always check extracted text, even if OCR validation failed
+  const extractedData = nocDoc.oValidationResult?.oExtractedData || {}
+  const nocText = extractedData.fullText || ''
+
+  if (!nocText || nocText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from NOC. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = nocText.toLowerCase()
+  const nocKeywords = ['noc', 'no objection', 'objection certificate', 'no objection certificate', 'leave approval', 'leave', 'approved', 'employer', 'authority', 'permission', 'granted', 'approved', 'support', 'application', 'visa officer', 'certificate']
+  const hasNOCKeywords = nocKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasNOCKeywords) {
+    const hasSubstantialText = nocText.trim().length > 100
+    // Check for company/employer patterns even if keywords not found
+    const hasCompanyPattern = /(company|employer|organization|corporation|limited|ltd|solutions)/i.test(nocText)
+    const hasDatePattern = /\d{1,2}[\s/\-.]\d{1,2}[\s/\-.]\d{2,4}/.test(nocText) || /(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(nocText)
+    const hasPassportPattern = /passport/i.test(nocText)
+    const hasEmployeePattern = /(employee|full.time|position|duties|resume)/i.test(nocText)
+
+    if (hasSubstantialText && (hasCompanyPattern || hasDatePattern || hasPassportPattern || hasEmployeePattern)) {
+      return { bIsValid: true, sReason: 'NOC is valid' }
+    }
+    return { bIsValid: false, sReason: 'Document does not appear to be a valid NOC. Please ensure it contains No Objection Certificate details.' }
+  }
+
+  return { bIsValid: true, sReason: 'NOC is valid' }
+}
+
+async function validateItinerary(documents, application = null) {
+  const itineraryDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'itinerary'
+  )
+
+  if (!itineraryDoc || !itineraryDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Itinerary not found or not uploaded' }
+  }
+
+  if (!itineraryDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Itinerary validation failed. Please upload a valid travel itinerary.' }
+  }
+
+  const extractedData = itineraryDoc.oValidationResult?.oExtractedData || {}
+  const itineraryText = extractedData.fullText || ''
+
+  if (!itineraryText || itineraryText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from itinerary. Please ensure the document is clear and readable.' }
+  }
+
+  const travelDates = application?.sTravelDates
+  if (travelDates) {
+    const parsedTravelDates = parseTravelDates(travelDates)
+    if (parsedTravelDates) {
+      const itineraryDates = extractDatesFromDocument(itineraryText)
+      const travelStartDate = parseDate(parsedTravelDates.startDate)
+      const travelEndDate = parseDate(parsedTravelDates.endDate)
+
+      if (itineraryDates.length > 0 && travelStartDate && travelEndDate) {
+        const hasMatchingDate = itineraryDates.some(itDate =>
+          itDate >= travelStartDate && itDate <= travelEndDate
+        )
+        if (!hasMatchingDate) {
+          return {
+            bIsValid: false,
+            sReason: `Itinerary dates do not match travel dates (${travelDates}). Itinerary should cover your travel period.`
+          }
+        }
+      }
+    }
+  }
+
+  return { bIsValid: true, sReason: 'Itinerary is valid' }
+}
+
 async function performValidation(application) {
   await application.populate('iVisaTypeId', 'aRequiredDocuments nDocumentsRequired sType')
 
@@ -1288,6 +1449,8 @@ async function performValidation(application) {
     visaSpecificRequiredDocs = ['sponsorship_letter', 'flight_cover_letter', 'travel_insurance', 'invitation_letter']
   } else if (visaTypeName === 'Student') {
     visaSpecificRequiredDocs = ['fee_receipt', 'academic_certificate']
+  } else if (visaTypeName === 'Tourist') {
+    visaSpecificRequiredDocs = ['cover_letter', 'noc', 'travel_insurance']
   }
 
   const formFields = ['passport_number', 'passport_expiry', 'employment_status', 'travel_dates']
@@ -1298,6 +1461,14 @@ async function performValidation(application) {
   const missingDocuments = documentFields.filter(
     doc => !uploadedDocs.includes(doc)
   )
+
+  if (visaTypeName === 'Tourist') {
+    const hasReturnTicket = uploadedDocs.includes('return_ticket')
+    const hasItinerary = uploadedDocs.includes('itinerary')
+    if (!hasReturnTicket && !hasItinerary) {
+      missingDocuments.push('return_ticket_or_itinerary')
+    }
+  }
 
   const missingFormFields = []
   if (requiredDocs.includes('passport_number') && !application.sPassportNumber) {
@@ -1425,7 +1596,78 @@ async function performValidation(application) {
     }
   }
 
-  if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
+  if (visaTypeName === 'Tourist') {
+    const dateMismatchResult = await validateTravelDates(application, updatedDocuments)
+    if (!dateMismatchResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'cover_letter'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = dateMismatchResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('cover_letter')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'cover_letter',
+          sReason: dateMismatchResult.sReason
+        })
+      }
+    }
+
+    const nocResult = await validateNOC(updatedDocuments, application)
+    if (!nocResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'noc'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = nocResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('noc')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'noc',
+          sReason: nocResult.sReason
+        })
+      }
+    } else if (nocResult.bIsValid) {
+      if (!validationResults.aValidDocuments.includes('noc')) {
+        validationResults.aValidDocuments.push('noc')
+      }
+    }
+
+    const returnTicketResult = await validateReturnTicket(application, updatedDocuments)
+    const itineraryResult = await validateItinerary(updatedDocuments, application)
+
+    if (!returnTicketResult.bIsValid && !itineraryResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingReturnIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'return_ticket'
+      )
+      const existingItineraryIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'itinerary'
+      )
+
+      if (existingReturnIndex < 0 && existingItineraryIndex < 0) {
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'return_ticket',
+          sReason: 'Either return ticket or itinerary is required for Tourist visa. Please provide at least one.'
+        })
+      }
+    } else {
+      if (returnTicketResult.bIsValid && !validationResults.aValidDocuments.includes('return_ticket')) {
+        validationResults.aValidDocuments.push('return_ticket')
+      }
+      if (itineraryResult.bIsValid && !validationResults.aValidDocuments.includes('itinerary')) {
+        validationResults.aValidDocuments.push('itinerary')
+      }
+    }
+  } else if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
     const dateMismatchResult = await validateTravelDates(application, updatedDocuments)
     if (!dateMismatchResult.bIsValid) {
       validationResults.bIsValid = false

@@ -4,6 +4,16 @@ const { GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3')
 const config = require('../config/config')
 const pdf = require('pdf-parse')
 
+let pdfjsLib = null
+let canvas = null
+
+try {
+  pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+  canvas = require('canvas')
+} catch (error) {
+  // pdfjs-dist or canvas not installed, will use pdf-parse only
+}
+
 async function checkFileExists(key) {
   try {
     const headCommand = new HeadObjectCommand({
@@ -87,21 +97,61 @@ async function extractTextFromS3(s3Key) {
     }
 
     // Fall back to OCR if pdf-parse failed or returned no text
-    try {
-      const worker = await createWorker('eng')
-      const { data: { text } } = await worker.recognize(fileBuffer)
-      await worker.terminate()
-      if (text && text.trim().length > 0) {
-        return text
+    // Convert PDF pages to images first, then use OCR (if pdfjs-dist and canvas are available)
+    if (pdfjsLib && canvas) {
+      try {
+        const loadingTask = pdfjsLib.getDocument({ data: fileBuffer })
+        const pdfDocument = await loadingTask.promise
+        const numPages = pdfDocument.numPages
+
+        const worker = await createWorker('eng')
+        let allText = ''
+
+        // Process first 3 pages (to avoid processing too many pages)
+        const pagesToProcess = Math.min(numPages, 3)
+
+        for (let pageNum = 1; pageNum <= pagesToProcess; pageNum++) {
+          try {
+            const page = await pdfDocument.getPage(pageNum)
+            const viewport = page.getViewport({ scale: 2.0 })
+
+            const pdfCanvas = canvas.createCanvas(viewport.width, viewport.height)
+            const context = pdfCanvas.getContext('2d')
+
+            await page.render({
+              canvasContext: context,
+              viewport
+            }).promise
+
+            const imageBuffer = pdfCanvas.toBuffer('image/png')
+            const { data: { text } } = await worker.recognize(imageBuffer)
+
+            if (text && text.trim().length > 0) {
+              allText += text + '\n'
+            }
+          } catch (pageError) {
+            // Continue with next page if one fails
+            continue
+          }
+        }
+
+        await worker.terminate()
+
+        if (allText && allText.trim().length > 0) {
+          return allText.trim()
+        }
+      } catch (ocrError) {
+        // If OCR fails, fall through to return pdf-parse result or throw error
       }
-      return extractedText || '' // Return whatever pdf-parse got, even if empty
-    } catch (ocrError) {
-      // If both methods failed, return whatever we got from pdf-parse (might be empty)
-      if (extractedText) {
-        return extractedText
-      }
-      throw new Error(`Failed to extract text from PDF. pdf-parse error: ${pdfError?.message || 'unknown'}, OCR error: ${ocrError.message}`)
     }
+
+    // If OCR not available or failed, return whatever pdf-parse got
+    if (extractedText) {
+      return extractedText
+    }
+
+    // If both methods failed and no text extracted
+    throw new Error(`Failed to extract text from PDF. pdf-parse error: ${pdfError?.message || 'unknown'}. ${pdfjsLib && canvas ? 'OCR conversion also failed.' : 'PDF to image conversion libraries not installed. Please install pdfjs-dist and canvas for OCR support on PDFs.'}`)
   } else {
     return fileBuffer.toString('utf-8')
   }
