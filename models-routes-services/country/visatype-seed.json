@@ -1,0 +1,1618 @@
+[
+  {
+    "iCountryId": "69589f26a9c370e5771451ca",
+    "sType": "Tourist",
+    "sDuration": "90 days",
+    "sProcessingTime": "5-10 business days",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Personal cover letter explaining travel purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Proof of leisure purpose or itinerary",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 150,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ca",
+    "sType": "Business",
+    "sDuration": "180 days",
+    "sProcessingTime": "7-14 business days",
+    "nDocumentsRequired": 14,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Business cover letter from company",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Business invitation letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "company_letter",
+        "sDescription": "Company letterhead with business purpose",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 200,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ca",
+    "sType": "Student",
+    "sDuration": "1-5 years",
+    "sProcessingTime": "4-8 weeks",
+    "nDocumentsRequired": 15,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Statement of purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation confirmation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of financial support",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Admission letter from educational institution",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "academic_transcripts",
+        "sDescription": "Academic transcripts and certificates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "english_proficiency",
+        "sDescription": "English language proficiency test results",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 650,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ca",
+    "sType": "Work",
+    "sDuration": "1-3 years",
+    "sProcessingTime": "8-12 weeks",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Cover letter from employer",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation proof",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment offer letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Work permit or sponsorship letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 500,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cb",
+    "sType": "Tourist",
+    "sDuration": "90 days",
+    "sProcessingTime": "5-10 business days",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Personal cover letter explaining travel purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Proof of leisure purpose or itinerary",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 25,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cb",
+    "sType": "Business",
+    "sDuration": "180 days",
+    "sProcessingTime": "7-14 business days",
+    "nDocumentsRequired": 14,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Business cover letter from company",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Business invitation letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "company_letter",
+        "sDescription": "Company letterhead with business purpose",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 50,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cb",
+    "sType": "Student",
+    "sDuration": "1-5 years",
+    "sProcessingTime": "4-8 weeks",
+    "nDocumentsRequired": 15,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Statement of purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation confirmation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of financial support",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Admission letter from educational institution",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "academic_transcripts",
+        "sDescription": "Academic transcripts and certificates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "english_proficiency",
+        "sDescription": "Japanese language proficiency test results",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 50,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cb",
+    "sType": "Work",
+    "sDuration": "1-3 years",
+    "sProcessingTime": "8-12 weeks",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Cover letter from employer",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation proof",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment offer letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Work permit or sponsorship letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 50,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cc",
+    "sType": "Tourist",
+    "sDuration": "90 days",
+    "sProcessingTime": "5-10 business days",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Personal cover letter explaining travel purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Proof of leisure purpose or itinerary",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 185,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cc",
+    "sType": "Business",
+    "sDuration": "180 days",
+    "sProcessingTime": "7-14 business days",
+    "nDocumentsRequired": 14,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Business cover letter from company",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Business invitation letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "company_letter",
+        "sDescription": "Company letterhead with business purpose",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 205,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cc",
+    "sType": "Student",
+    "sDuration": "1-5 years",
+    "sProcessingTime": "4-8 weeks",
+    "nDocumentsRequired": 15,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Statement of purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation confirmation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of financial support",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Admission letter from educational institution",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "academic_transcripts",
+        "sDescription": "Academic transcripts and certificates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "english_proficiency",
+        "sDescription": "English language proficiency test results",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 185,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cc",
+    "sType": "Work",
+    "sDuration": "1-3 years",
+    "sProcessingTime": "8-12 weeks",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Cover letter from employer",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation proof",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment offer letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Work permit or sponsorship letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 205,
+    "sCurrency": "USD",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cd",
+    "sType": "Tourist",
+    "sDuration": "90 days",
+    "sProcessingTime": "5-10 business days",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Personal cover letter explaining travel purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Proof of leisure purpose or itinerary",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 80,
+    "sCurrency": "EUR",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cd",
+    "sType": "Business",
+    "sDuration": "180 days",
+    "sProcessingTime": "7-14 business days",
+    "nDocumentsRequired": 14,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Business cover letter from company",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Business invitation letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "company_letter",
+        "sDescription": "Company letterhead with business purpose",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 99,
+    "sCurrency": "EUR",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cd",
+    "sType": "Student",
+    "sDuration": "1-5 years",
+    "sProcessingTime": "4-8 weeks",
+    "nDocumentsRequired": 15,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Statement of purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation confirmation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of financial support",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Admission letter from educational institution",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "academic_transcripts",
+        "sDescription": "Academic transcripts and certificates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "english_proficiency",
+        "sDescription": "French language proficiency test results",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 99,
+    "sCurrency": "EUR",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451cd",
+    "sType": "Work",
+    "sDuration": "1-3 years",
+    "sProcessingTime": "8-12 weeks",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Cover letter from employer",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation proof",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment offer letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Work permit or sponsorship letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 99,
+    "sCurrency": "EUR",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ce",
+    "sType": "Tourist",
+    "sDuration": "90 days",
+    "sProcessingTime": "5-10 business days",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Personal cover letter explaining travel purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Proof of leisure purpose or itinerary",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 115,
+    "sCurrency": "GBP",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ce",
+    "sType": "Business",
+    "sDuration": "180 days",
+    "sProcessingTime": "7-14 business days",
+    "nDocumentsRequired": 14,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Business cover letter from company",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Hotel booking or accommodation invitation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Business invitation letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "company_letter",
+        "sDescription": "Company letterhead with business purpose",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 200,
+    "sCurrency": "GBP",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ce",
+    "sType": "Student",
+    "sDuration": "1-5 years",
+    "sProcessingTime": "4-8 weeks",
+    "nDocumentsRequired": 15,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Statement of purpose",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation confirmation",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of financial support",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment status certificate",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Admission letter from educational institution",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "academic_transcripts",
+        "sDescription": "Academic transcripts and certificates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "english_proficiency",
+        "sDescription": "English language proficiency test results",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 363,
+    "sCurrency": "GBP",
+    "eStatus": "Y"
+  },
+  {
+    "iCountryId": "69589f26a9c370e5771451ce",
+    "sType": "Work",
+    "sDuration": "1-3 years",
+    "sProcessingTime": "8-12 weeks",
+    "nDocumentsRequired": 13,
+    "aRequiredDocuments": [
+      {
+        "sName": "passport_number",
+        "sDescription": "Valid passport with at least 6 months validity",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_expiry",
+        "sDescription": "Passport expiry date",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "passport_photo",
+        "sDescription": "2 recent passport size photographs",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "visa_application_form",
+        "sDescription": "Completed visa application form",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "cover_letter",
+        "sDescription": "Cover letter from employer",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "accommodation_proof",
+        "sDescription": "Accommodation proof",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "bank_statements",
+        "sDescription": "Bank statements for last 6 months",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "income_proof",
+        "sDescription": "Proof of income or employment",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "itr",
+        "sDescription": "Income Tax Returns for last 3 years",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "employment_status",
+        "sDescription": "Employment offer letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "travel_dates",
+        "sDescription": "Travel itinerary with dates",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "leisure_proof",
+        "sDescription": "Work permit or sponsorship letter",
+        "bIsMandatory": true
+      },
+      {
+        "sName": "return_ticket",
+        "sDescription": "Return or onward flight ticket",
+        "bIsMandatory": true
+      }
+    ],
+    "nFee": 625,
+    "sCurrency": "GBP",
+    "eStatus": "Y"
+  }
+]
+

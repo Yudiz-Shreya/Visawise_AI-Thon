@@ -1,7 +1,7 @@
 const mongoose = require('mongoose')
 
 const config = require('../config/config')
-const { handleCatchError } = require('../helpers/utilities.service')
+const { handleCatchError } = require('../helpers/utilities.services')
 
 const DB = connection(
   config.DB_URL,
