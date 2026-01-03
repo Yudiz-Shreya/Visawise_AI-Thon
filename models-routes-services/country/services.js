@@ -248,6 +248,133 @@ function extractPassportNumber(text) {
   return null
 }
 
+function extractNames(text) {
+  if (!text) return []
+  const names = []
+  const patterns = [
+    /(?:mr|mrs|miss|ms)\.?\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)+)/gi,
+    /passenger[s]?:?\s*([A-Z][A-Z\s,]+)/gi,
+    /name[s]?:?\s*([A-Z][A-Z\s,]+)/gi,
+    /([A-Z][A-Za-z]+\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*)/g
+  ]
+  patterns.forEach(pattern => {
+    const matches = text.matchAll(pattern)
+    for (const match of matches) {
+      const name = match[1]?.trim()
+      if (name && name.length > 3) {
+        const normalizedName = name.toUpperCase().replace(/[^A-Z\s]/g, '').trim()
+        if (normalizedName.split(/\s+/).length >= 2) {
+          names.push(normalizedName)
+        }
+      }
+    }
+  })
+  return [...new Set(names)]
+}
+
+function extractCompanyName(text) {
+  if (!text) return null
+  const patterns = [
+    /(?:company|employer|organization|corporation)[\s:]+([A-Z][A-Za-z\s&]+(?:Limited|Ltd|LLC|Inc|Corporation|Corp|Solutions|Technologies|Systems))/i,
+    /([A-Z][A-Za-z\s&]+(?:Limited|Ltd|LLC|Inc|Corporation|Corp))\s+(?:is|are|was|were|will)/i,
+    /(?:we|our company)[\s,]+([A-Z][A-Za-z\s&]+(?:Limited|Ltd|LLC|Inc))/i
+  ]
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) {
+      return match[1]?.trim()
+    }
+  }
+  return null
+}
+
+function extractDestinations(text) {
+  if (!text) return []
+  const destinations = []
+  const patterns = [
+    /(?:to|destination|traveling to|visiting|visit to)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/gi,
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:spain|barcelona|madrid|zurich|doha|delhi|ahmedabad)/gi,
+    /(?:barcelona|madrid|spain|zurich|doha|delhi|ahmedabad)/gi
+  ]
+  patterns.forEach(pattern => {
+    const matches = text.matchAll(pattern)
+    for (const match of matches) {
+      const dest = match[1] || match[0]
+      if (dest) {
+        destinations.push(dest.trim())
+      }
+    }
+  })
+  return [...new Set(destinations)]
+}
+
+function extractFlightDates(text) {
+  if (!text) return []
+  const flightDates = []
+  const datePatterns = [
+    /(?:departure|depart|leaving|flight date)[\s:]+(\d{1,2}[\s/\-.](\?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s/\-.]\d{2,4})/gi,
+    /(?:arrival|arrive|arriving)[\s:]+(\d{1,2}[\s/\-.](\?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s/\-.]\d{2,4})/gi,
+    /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{2,4}/gi
+  ]
+  datePatterns.forEach(pattern => {
+    const matches = text.matchAll(pattern)
+    for (const match of matches) {
+      const dateStr = match[1] || match[0]
+      const parsed = parseDate(dateStr)
+      if (parsed) {
+        flightDates.push(parsed)
+      }
+    }
+  })
+  const allDates = extractDatesFromDocument(text)
+  return [...new Set([...flightDates, ...allDates])]
+}
+
+function namesMatch(name1, name2) {
+  if (!name1 || !name2) return false
+  const n1 = name1.toUpperCase().replace(/[^A-Z\s]/g, '').trim()
+  const n2 = name2.toUpperCase().replace(/[^A-Z\s]/g, '').trim()
+
+  if (n1 === n2) return true
+
+  const parts1 = n1.split(/\s+/).filter(p => p.length > 2)
+  const parts2 = n2.split(/\s+/).filter(p => p.length > 2)
+
+  if (parts1.length === 0 || parts2.length === 0) return false
+
+  const firstNamesMatch = parts1[0] === parts2[0]
+  const lastNamesMatch = parts1[parts1.length - 1] === parts2[parts2.length - 1]
+
+  if (firstNamesMatch && lastNamesMatch) return true
+
+  if (parts1.length >= 2 && parts2.length >= 2) {
+    const allParts1Match = parts1.every(p1 => parts2.some(p2 => p1 === p2))
+    const allParts2Match = parts2.every(p2 => parts1.some(p1 => p1 === p2))
+    if (allParts1Match && allParts2Match && parts1.length === parts2.length) return true
+  }
+
+  return false
+}
+
+function datesOverlap(date1, date2, toleranceDays = 3) {
+  if (!date1 || !date2) return false
+  const d1 = date1 instanceof Date ? date1 : parseDate(date1)
+  const d2 = date2 instanceof Date ? date2 : parseDate(date2)
+  if (!d1 || !d2) return false
+  const diff = Math.abs((d1 - d2) / (1000 * 60 * 60 * 24))
+  return diff <= toleranceDays
+}
+
+function datesInRange(checkDate, startDate, endDate, toleranceDays = 3) {
+  if (!checkDate || !startDate || !endDate) return false
+  const check = checkDate instanceof Date ? checkDate : parseDate(checkDate)
+  const start = startDate instanceof Date ? startDate : parseDate(startDate)
+  const end = endDate instanceof Date ? endDate : parseDate(endDate)
+  if (!check || !start || !end) return false
+  return check >= new Date(start.getTime() - toleranceDays * 24 * 60 * 60 * 1000) &&
+    check <= new Date(end.getTime() + toleranceDays * 24 * 60 * 60 * 1000)
+}
+
 function extractDatesFromDocument(text) {
   if (!text) return []
   const dates = extractDatesFromText(text)
@@ -596,6 +723,375 @@ async function validateLeisureProof(application, documents) {
   return { bIsValid: true, sReason: 'Leisure proof dates match travel dates' }
 }
 
+async function validateSponsorshipLetter(documents, application = null) {
+  const sponsorshipDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'sponsorship_letter'
+  )
+
+  if (!sponsorshipDoc || !sponsorshipDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Sponsorship letter from company is required for Business visa' }
+  }
+
+  if (!sponsorshipDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Sponsorship letter validation failed. Please upload a valid sponsorship letter.' }
+  }
+
+  const extractedData = sponsorshipDoc.oValidationResult?.oExtractedData || {}
+  const letterText = extractedData.fullText || ''
+
+  if (!letterText || letterText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from sponsorship letter. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = letterText.toLowerCase()
+  const requiredKeywords = ['company', 'sponsor', 'sponsorship', 'business', 'employer']
+  const hasRequiredKeywords = requiredKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasRequiredKeywords) {
+    return { bIsValid: false, sReason: 'Sponsorship letter does not appear to be from a company. Please ensure it contains company sponsorship details.' }
+  }
+
+  const companyName = extractCompanyName(letterText)
+  const travelDates = extractDatesFromDocument(letterText)
+  const names = extractNames(letterText)
+  const destinations = extractDestinations(letterText)
+
+  const result = {
+    bIsValid: true,
+    sReason: 'Sponsorship letter is valid',
+    extractedData: {
+      companyName,
+      travelDates,
+      names,
+      destinations,
+      fullText: letterText
+    }
+  }
+
+  sponsorshipDoc.oValidationResult.oExtractedData = {
+    ...sponsorshipDoc.oValidationResult.oExtractedData,
+    ...result.extractedData
+  }
+
+  return result
+}
+
+async function validateFlightCoverLetter(documents, application = null, otherDocsData = {}) {
+  const flightCoverDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'flight_cover_letter'
+  )
+
+  if (!flightCoverDoc || !flightCoverDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Flight itinerary/ticket is required for Business visa' }
+  }
+
+  if (!flightCoverDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Flight itinerary validation failed. Please upload a valid flight itinerary.' }
+  }
+
+  const extractedData = flightCoverDoc.oValidationResult?.oExtractedData || {}
+  const letterText = extractedData.fullText || ''
+
+  if (!letterText || letterText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from flight itinerary. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = letterText.toLowerCase()
+  const flightKeywords = ['flight', 'airline', 'ticket', 'booking', 'travel', 'itinerary', 'departure', 'arrival', 'passenger']
+  const hasFlightKeywords = flightKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasFlightKeywords) {
+    return { bIsValid: false, sReason: 'Document does not appear to contain flight information. Please ensure it includes flight booking details.' }
+  }
+
+  const flightDates = extractFlightDates(letterText)
+  const names = extractNames(letterText)
+  const destinations = extractDestinations(letterText)
+  const passportNumbers = []
+  const passportPattern = /passport\s*(?:number|no|#)?\s*:?\s*([A-Z0-9]{6,12})/gi
+  const passportMatches = letterText.matchAll(passportPattern)
+  for (const match of passportMatches) {
+    if (match[1]) passportNumbers.push(match[1])
+  }
+
+  const result = {
+    bIsValid: true,
+    sReason: 'Flight itinerary is valid',
+    extractedData: {
+      flightDates,
+      names,
+      destinations,
+      passportNumbers: [...new Set(passportNumbers)],
+      fullText: letterText
+    }
+  }
+
+  if (otherDocsData.sponsorshipDates && flightDates.length > 0) {
+    const hasMatchingDate = flightDates.some(fd =>
+      otherDocsData.sponsorshipDates.some(sd => datesOverlap(fd, sd, 7))
+    )
+    if (!hasMatchingDate) {
+      result.bIsValid = false
+      result.sReason = 'Flight dates do not match travel dates mentioned in sponsorship letter'
+    }
+  }
+
+  if (otherDocsData.sponsorshipNames && names.length > 0) {
+    const allNamesMatch = names.every(fn =>
+      otherDocsData.sponsorshipNames.some(sn => namesMatch(fn, sn))
+    ) && otherDocsData.sponsorshipNames.every(sn =>
+      names.some(fn => namesMatch(fn, sn))
+    )
+    if (!allNamesMatch) {
+      result.bIsValid = false
+      result.sReason = `Passenger names in flight itinerary (${names.join(', ')}) do not match names in sponsorship letter (${otherDocsData.sponsorshipNames.join(', ')})`
+    }
+  }
+
+  if (otherDocsData.invitationDates && flightDates.length > 0) {
+    const hasMatchingDate = flightDates.some(fd =>
+      otherDocsData.invitationDates.some(id => datesOverlap(fd, id, 7))
+    )
+    if (!hasMatchingDate && result.bIsValid) {
+      result.sReason += '. Note: Flight dates should align with invitation letter dates'
+    }
+  }
+
+  flightCoverDoc.oValidationResult.oExtractedData = {
+    ...flightCoverDoc.oValidationResult.oExtractedData,
+    ...result.extractedData
+  }
+
+  return result
+}
+
+async function validateTravelInsurance(documents, application = null, otherDocsData = {}) {
+  const insuranceDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'travel_insurance'
+  )
+
+  if (!insuranceDoc || !insuranceDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Travel insurance is required for Business visa' }
+  }
+
+  if (!insuranceDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Travel insurance validation failed. Please upload a valid travel insurance document.' }
+  }
+
+  const extractedData = insuranceDoc.oValidationResult?.oExtractedData || {}
+  const insuranceText = extractedData.fullText || ''
+
+  if (!insuranceText || insuranceText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from travel insurance. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = insuranceText.toLowerCase()
+  const insuranceKeywords = ['insurance', 'coverage', 'policy', 'insured', 'premium', 'travel insurance', 'medical', 'evacuation', 'accident']
+  const hasInsuranceKeywords = insuranceKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasInsuranceKeywords) {
+    return { bIsValid: false, sReason: 'Document does not appear to be a travel insurance policy. Please ensure it is a valid travel insurance document.' }
+  }
+
+  const policyDates = extractDatesFromDocument(insuranceText)
+  const hasMedicalCoverage = /medical|health|treatment|evacuation|hospital/i.test(insuranceText)
+  const hasMinimumCoverage = /(\$|USD|EUR|INR)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/.test(insuranceText)
+
+  const result = {
+    bIsValid: true,
+    sReason: 'Travel insurance is valid',
+    extractedData: {
+      policyDates,
+      hasMedicalCoverage,
+      hasMinimumCoverage,
+      fullText: insuranceText
+    }
+  }
+
+  if (!hasMedicalCoverage) {
+    result.sReason += '. Warning: Medical coverage should be included'
+  }
+
+  if (otherDocsData.sponsorshipDates && policyDates.length > 0) {
+    const travelStart = otherDocsData.sponsorshipDates[0]
+    const travelEnd = otherDocsData.sponsorshipDates[otherDocsData.sponsorshipDates.length - 1]
+    if (travelStart && travelEnd) {
+      const coversTravelPeriod = policyDates.some(pd =>
+        datesInRange(pd, travelStart, travelEnd, 30)
+      )
+      if (!coversTravelPeriod && policyDates.length > 0) {
+        result.sReason += '. Note: Verify insurance coverage period matches travel dates'
+      }
+    }
+  }
+
+  insuranceDoc.oValidationResult.oExtractedData = {
+    ...insuranceDoc.oValidationResult.oExtractedData,
+    ...result.extractedData
+  }
+
+  return result
+}
+
+async function validateInvitationLetter(documents, application = null, otherDocsData = {}) {
+  const invitationDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'invitation_letter'
+  )
+
+  if (!invitationDoc || !invitationDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Invitation letter is required for Business visa' }
+  }
+
+  if (!invitationDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Invitation letter validation failed. Please upload a valid invitation letter.' }
+  }
+
+  const extractedData = invitationDoc.oValidationResult?.oExtractedData || {}
+  const letterText = extractedData.fullText || ''
+
+  if (!letterText || letterText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from invitation letter. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = letterText.toLowerCase()
+  const invitationKeywords = ['invitation', 'invite', 'welcome', 'request', 'host', 'visit', 'event', 'conference', 'exhibition']
+  const hasInvitationKeywords = invitationKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasInvitationKeywords) {
+    return { bIsValid: false, sReason: 'Document does not appear to be an invitation letter. Please ensure it contains invitation details.' }
+  }
+
+  const invitationDates = extractDatesFromDocument(letterText)
+  const names = extractNames(letterText)
+  const destinations = extractDestinations(letterText)
+  const passportNumber = extractPassportNumber(letterText)
+  const eventName = letterText.match(/(?:event|conference|exhibition|meeting)[\s:]+([A-Z][A-Za-z\s&0-9]+)/i)?.[1]
+
+  const result = {
+    bIsValid: true,
+    sReason: 'Invitation letter is valid',
+    extractedData: {
+      invitationDates,
+      names,
+      destinations,
+      passportNumber,
+      eventName,
+      fullText: letterText
+    }
+  }
+
+  if (otherDocsData.sponsorshipDates && invitationDates.length > 0) {
+    const hasMatchingDate = invitationDates.some(id =>
+      otherDocsData.sponsorshipDates.some(sd => datesOverlap(id, sd, 7))
+    )
+    if (!hasMatchingDate) {
+      result.bIsValid = false
+      result.sReason = 'Invitation letter dates do not match travel dates mentioned in sponsorship letter'
+    }
+  }
+
+  if (otherDocsData.sponsorshipNames && names.length > 0) {
+    const allNamesMatch = names.every(invName =>
+      otherDocsData.sponsorshipNames.some(sn => namesMatch(invName, sn))
+    ) && otherDocsData.sponsorshipNames.every(sn =>
+      names.some(invName => namesMatch(invName, sn))
+    )
+    if (!allNamesMatch) {
+      result.bIsValid = false
+      result.sReason = `Names in invitation letter (${names.join(', ')}) do not match names in sponsorship letter (${otherDocsData.sponsorshipNames.join(', ')})`
+    }
+  }
+
+  if (otherDocsData.flightDates && invitationDates.length > 0) {
+    const hasMatchingDate = invitationDates.some(id =>
+      otherDocsData.flightDates.some(fd => datesOverlap(id, fd, 7))
+    )
+    if (!hasMatchingDate && result.bIsValid) {
+      result.sReason += '. Note: Invitation dates should align with flight dates'
+    }
+  }
+
+  if (otherDocsData.sponsorshipCompany && destinations.length > 0) {
+    const destinationMatch = destinations.some(d =>
+      d.toLowerCase().includes('barcelona') ||
+      d.toLowerCase().includes('spain') ||
+      d.toLowerCase().includes('madrid')
+    )
+    if (!destinationMatch) {
+      result.sReason += '. Note: Verify destination matches travel purpose'
+    }
+  }
+
+  invitationDoc.oValidationResult.oExtractedData = {
+    ...invitationDoc.oValidationResult.oExtractedData,
+    ...result.extractedData
+  }
+
+  return result
+}
+
+async function validateFeeReceipt(documents) {
+  const feeReceiptDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'fee_receipt'
+  )
+
+  if (!feeReceiptDoc || !feeReceiptDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Fee receipt is required for Student visa' }
+  }
+
+  if (!feeReceiptDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Fee receipt validation failed. Please upload a valid fee receipt.' }
+  }
+
+  const extractedData = feeReceiptDoc.oValidationResult?.oExtractedData || {}
+  const receiptText = extractedData.fullText || ''
+
+  if (!receiptText || receiptText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from fee receipt. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = receiptText.toLowerCase()
+  const receiptKeywords = ['receipt', 'fee', 'payment', 'paid', 'amount', 'tuition', 'registration']
+  const hasReceiptKeywords = receiptKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasReceiptKeywords) {
+    return { bIsValid: false, sReason: 'Document does not appear to be a fee receipt. Please ensure it contains payment/fee information.' }
+  }
+
+  return { bIsValid: true, sReason: 'Fee receipt is valid' }
+}
+
+async function validateAcademicCertificate(documents) {
+  const academicDoc = documents.find(
+    doc => doc.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === 'academic_certificate'
+  )
+
+  if (!academicDoc || !academicDoc.sS3Key) {
+    return { bIsValid: false, sReason: 'Academic certificate is required for Student visa' }
+  }
+
+  if (!academicDoc.oValidationResult?.bIsValid) {
+    return { bIsValid: false, sReason: 'Academic certificate validation failed. Please upload a valid academic certificate.' }
+  }
+
+  const extractedData = academicDoc.oValidationResult?.oExtractedData || {}
+  const certificateText = extractedData.fullText || ''
+
+  if (!certificateText || certificateText.trim().length === 0) {
+    return { bIsValid: false, sReason: 'Could not extract text from academic certificate. Please ensure the document is clear and readable.' }
+  }
+
+  const lowerText = certificateText.toLowerCase()
+  const academicKeywords = ['certificate', 'degree', 'diploma', 'academic', 'education', 'university', 'college', 'qualification', 'graduation']
+  const hasAcademicKeywords = academicKeywords.some(keyword => lowerText.includes(keyword))
+
+  if (!hasAcademicKeywords) {
+    return { bIsValid: false, sReason: 'Document does not appear to be an academic certificate. Please ensure it is a valid educational certificate.' }
+  }
+
+  return { bIsValid: true, sReason: 'Academic certificate is valid' }
+}
+
 class CountryService {
   async getCountries(req, res) {
     try {
@@ -790,7 +1286,7 @@ class CountryService {
       }
 
       const application = await Application.findById(applicationId)
-        .populate('iVisaTypeId', 'aRequiredDocuments nDocumentsRequired')
+        .populate('iVisaTypeId', 'aRequiredDocuments nDocumentsRequired sType')
 
       if (!application) {
         return res.status(status.NotFound).json({
@@ -800,11 +1296,21 @@ class CountryService {
       }
 
       const visaType = application.iVisaTypeId
+      const visaTypeName = visaType?.sType || ''
       const requiredDocs = visaType.aRequiredDocuments.map(doc => doc.sName.toLowerCase().replace(/\s+/g, '_'))
       const uploadedDocs = application.aDocuments.map(doc => doc.sDocumentType.toLowerCase().replace(/\s+/g, '_'))
 
+      let visaSpecificRequiredDocs = []
+      if (visaTypeName === 'Business') {
+        visaSpecificRequiredDocs = ['sponsorship_letter', 'flight_cover_letter', 'travel_insurance', 'invitation_letter']
+      } else if (visaTypeName === 'Student') {
+        visaSpecificRequiredDocs = ['fee_receipt', 'academic_certificate']
+      }
+
       const formFields = ['passport_number', 'passport_expiry', 'employment_status', 'travel_dates']
-      const documentFields = requiredDocs.filter(doc => !formFields.includes(doc))
+      const documentFields = visaSpecificRequiredDocs.length > 0
+        ? visaSpecificRequiredDocs
+        : requiredDocs.filter(doc => !formFields.includes(doc))
 
       const missingDocuments = documentFields.filter(
         doc => !uploadedDocs.includes(doc)
@@ -937,63 +1443,147 @@ class CountryService {
         }
       }
 
-      const dateMismatchResult = await validateTravelDates(application, updatedDocuments)
-      if (!dateMismatchResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'cover_letter'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = dateMismatchResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('cover_letter')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
+      if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
+        const dateMismatchResult = await validateTravelDates(application, updatedDocuments)
+        if (!dateMismatchResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'cover_letter'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = dateMismatchResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('cover_letter')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'cover_letter',
+              sReason: dateMismatchResult.sReason
+            })
           }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'cover_letter',
-            sReason: dateMismatchResult.sReason
-          })
         }
       }
 
-      const returnTicketResult = await validateReturnTicket(application, updatedDocuments)
-      if (!returnTicketResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'return_ticket'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = returnTicketResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('return_ticket')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
+      if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
+        const returnTicketResult = await validateReturnTicket(application, updatedDocuments)
+        if (!returnTicketResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'return_ticket'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = returnTicketResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('return_ticket')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'return_ticket',
+              sReason: returnTicketResult.sReason
+            })
           }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'return_ticket',
-            sReason: returnTicketResult.sReason
-          })
         }
-      }
 
-      const accommodationResult = await validateAccommodationProof(application, updatedDocuments)
-      if (!accommodationResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'accommodation_proof'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = accommodationResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('accommodation_proof')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
+        const accommodationResult = await validateAccommodationProof(application, updatedDocuments)
+        if (!accommodationResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'accommodation_proof'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = accommodationResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('accommodation_proof')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'accommodation_proof',
+              sReason: accommodationResult.sReason
+            })
           }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'accommodation_proof',
-            sReason: accommodationResult.sReason
-          })
+        }
+
+        const bankStatementsResult = await validateBankStatements(updatedDocuments)
+        if (!bankStatementsResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'bank_statements'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = bankStatementsResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('bank_statements')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'bank_statements',
+              sReason: bankStatementsResult.sReason
+            })
+          }
+        }
+
+        const itrResult = await validateITR(updatedDocuments)
+        if (!itrResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'itr'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = itrResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('itr')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'itr',
+              sReason: itrResult.sReason
+            })
+          }
+        }
+
+        const incomeProofResult = await validateIncomeProof(application, updatedDocuments)
+        if (!incomeProofResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'income_proof'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = incomeProofResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('income_proof')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'income_proof',
+              sReason: incomeProofResult.sReason
+            })
+          }
+        }
+
+        const leisureProofResult = await validateLeisureProof(application, updatedDocuments)
+        if (!leisureProofResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'leisure_proof'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = leisureProofResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('leisure_proof')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'leisure_proof',
+              sReason: leisureProofResult.sReason
+            })
+          }
         }
       }
 
@@ -1010,83 +1600,155 @@ class CountryService {
         }
       }
 
-      const bankStatementsResult = await validateBankStatements(updatedDocuments)
-      if (!bankStatementsResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'bank_statements'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = bankStatementsResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('bank_statements')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
+      if (visaTypeName === 'Business') {
+        const sponsorshipResult = await validateSponsorshipLetter(updatedDocuments, application)
+        const sponsorshipData = sponsorshipResult.extractedData || {}
+
+        if (!sponsorshipResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'sponsorship_letter'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = sponsorshipResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('sponsorship_letter')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'sponsorship_letter',
+              sReason: sponsorshipResult.sReason
+            })
           }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'bank_statements',
-            sReason: bankStatementsResult.sReason
-          })
+        } else if (sponsorshipResult.bIsValid) {
+          if (!validationResults.aValidDocuments.includes('sponsorship_letter')) {
+            validationResults.aValidDocuments.push('sponsorship_letter')
+          }
+        }
+
+        const otherDocsData = {
+          sponsorshipDates: sponsorshipData.travelDates || [],
+          sponsorshipNames: sponsorshipData.names || [],
+          sponsorshipCompany: sponsorshipData.companyName,
+          sponsorshipDestinations: sponsorshipData.destinations || []
+        }
+
+        const flightCoverResult = await validateFlightCoverLetter(updatedDocuments, application, otherDocsData)
+        otherDocsData.flightDates = flightCoverResult.extractedData?.flightDates || []
+        otherDocsData.flightNames = flightCoverResult.extractedData?.names || []
+
+        if (!flightCoverResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'flight_cover_letter'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = flightCoverResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('flight_cover_letter')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'flight_cover_letter',
+              sReason: flightCoverResult.sReason
+            })
+          }
+        } else if (flightCoverResult.bIsValid) {
+          if (!validationResults.aValidDocuments.includes('flight_cover_letter')) {
+            validationResults.aValidDocuments.push('flight_cover_letter')
+          }
+        }
+
+        const travelInsuranceResult = await validateTravelInsurance(updatedDocuments, application, otherDocsData)
+        if (!travelInsuranceResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'travel_insurance'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = travelInsuranceResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('travel_insurance')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'travel_insurance',
+              sReason: travelInsuranceResult.sReason
+            })
+          }
+        } else if (travelInsuranceResult.bIsValid) {
+          if (!validationResults.aValidDocuments.includes('travel_insurance')) {
+            validationResults.aValidDocuments.push('travel_insurance')
+          }
+        }
+
+        const invitationResult = await validateInvitationLetter(updatedDocuments, application, otherDocsData)
+        if (!invitationResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'invitation_letter'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = invitationResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('invitation_letter')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'invitation_letter',
+              sReason: invitationResult.sReason
+            })
+          }
+        } else if (invitationResult.bIsValid) {
+          if (!validationResults.aValidDocuments.includes('invitation_letter')) {
+            validationResults.aValidDocuments.push('invitation_letter')
+          }
         }
       }
 
-      const itrResult = await validateITR(updatedDocuments)
-      if (!itrResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'itr'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = itrResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('itr')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
+      if (visaTypeName === 'Student') {
+        const feeReceiptResult = await validateFeeReceipt(updatedDocuments)
+        if (!feeReceiptResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'fee_receipt'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = feeReceiptResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('fee_receipt')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'fee_receipt',
+              sReason: feeReceiptResult.sReason
+            })
           }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'itr',
-            sReason: itrResult.sReason
-          })
         }
-      }
 
-      const incomeProofResult = await validateIncomeProof(application, updatedDocuments)
-      if (!incomeProofResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'income_proof'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = incomeProofResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('income_proof')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
+        const academicCertResult = await validateAcademicCertificate(updatedDocuments)
+        if (!academicCertResult.bIsValid) {
+          validationResults.bIsValid = false
+          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+            doc => doc.sDocumentType === 'academic_certificate'
+          )
+          if (existingInvalidIndex >= 0) {
+            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = academicCertResult.sReason
+          } else {
+            const validIndex = validationResults.aValidDocuments.indexOf('academic_certificate')
+            if (validIndex >= 0) {
+              validationResults.aValidDocuments.splice(validIndex, 1)
+            }
+            validationResults.aInvalidDocuments.push({
+              sDocumentType: 'academic_certificate',
+              sReason: academicCertResult.sReason
+            })
           }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'income_proof',
-            sReason: incomeProofResult.sReason
-          })
-        }
-      }
-
-      const leisureProofResult = await validateLeisureProof(application, updatedDocuments)
-      if (!leisureProofResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'leisure_proof'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = leisureProofResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('leisure_proof')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
-          }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'leisure_proof',
-            sReason: leisureProofResult.sReason
-          })
         }
       }
 
