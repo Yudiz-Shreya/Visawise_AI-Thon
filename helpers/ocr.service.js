@@ -1,59 +1,109 @@
 const { createWorker } = require('tesseract.js')
 const { s3Client } = require('./s3.service')
-const { GetObjectCommand } = require('@aws-sdk/client-s3')
+const { GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3')
 const config = require('../config/config')
 const pdf = require('pdf-parse')
 
-async function extractTextFromS3(s3Key) {
+async function checkFileExists(key) {
   try {
-    const command = new GetObjectCommand({
+    const headCommand = new HeadObjectCommand({
       Bucket: config.S3_BUCKET_NAME,
-      Key: s3Key
+      Key: key
     })
-
-    const s3Object = await s3Client.send(command)
-    const chunks = []
-    for await (const chunk of s3Object.Body) {
-      chunks.push(chunk)
-    }
-    const fileBuffer = Buffer.concat(chunks)
-
-    const fileExtension = s3Key.split('.').pop().toLowerCase()
-    const isImage = ['jpg', 'jpeg', 'png'].includes(fileExtension)
-    const isPdf = fileExtension === 'pdf'
-
-    if (isImage) {
-      try {
-        const worker = await createWorker('eng')
-        const { data: { text } } = await worker.recognize(fileBuffer)
-        await worker.terminate()
-        return text || ''
-      } catch (error) {
-        console.error('OCR error for image:', error)
-        throw new Error(`Failed to extract text from image: ${error.message}`)
-      }
-    } else if (isPdf) {
-      try {
-        const pdfData = await pdf(fileBuffer)
-        const extractedText = pdfData.text || ''
-        if (extractedText.trim().length > 0) {
-          return extractedText
-        }
-        console.log('PDF has no extractable text, trying OCR on first page...')
-        const worker = await createWorker('eng')
-        const { data: { text } } = await worker.recognize(fileBuffer)
-        await worker.terminate()
-        return text || ''
-      } catch (error) {
-        console.error('PDF extraction error:', error)
-        throw new Error(`Failed to extract text from PDF: ${error.message}`)
-      }
-    } else {
-      return fileBuffer.toString('utf-8')
-    }
+    await s3Client.send(headCommand)
+    return true
   } catch (error) {
-    console.error('Error extracting text from S3:', error)
+    if (error.Code === 'NotFound' || error.Code === 'NoSuchKey') {
+      return false
+    }
     throw error
+  }
+}
+
+async function extractTextFromS3(s3Key) {
+  const projectFolder = config.S3_PROJECT_FOLDER || 'visawise/'
+  const normalizedFolder = projectFolder.endsWith('/') ? projectFolder : projectFolder + '/'
+
+  const possibleKeys = []
+  if (s3Key.startsWith(normalizedFolder)) {
+    possibleKeys.push(s3Key)
+    possibleKeys.push(s3Key.replace(normalizedFolder, ''))
+  } else {
+    possibleKeys.push(normalizedFolder + (s3Key.startsWith('/') ? s3Key.substring(1) : s3Key))
+    possibleKeys.push(s3Key)
+  }
+
+  let workingKey = null
+  for (const key of possibleKeys) {
+    const exists = await checkFileExists(key)
+    if (exists) {
+      workingKey = key
+      break
+    }
+  }
+
+  if (!workingKey) {
+    throw new Error(`File not found in S3. Tried keys: ${possibleKeys.join(', ')}. Please ensure the file was uploaded correctly and the S3 key in the database matches the actual file location.`)
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: config.S3_BUCKET_NAME,
+    Key: workingKey
+  })
+
+  const s3Object = await s3Client.send(command)
+  const chunks = []
+  for await (const chunk of s3Object.Body) {
+    chunks.push(chunk)
+  }
+  const fileBuffer = Buffer.concat(chunks)
+
+  const fileExtension = workingKey.split('.').pop().toLowerCase()
+  const isImage = ['jpg', 'jpeg', 'png'].includes(fileExtension)
+  const isPdf = fileExtension === 'pdf'
+
+  if (isImage) {
+    try {
+      const worker = await createWorker('eng')
+      const { data: { text } } = await worker.recognize(fileBuffer)
+      await worker.terminate()
+      return text || ''
+    } catch (error) {
+      throw new Error(`Failed to extract text from image: ${error.message}`)
+    }
+  } else if (isPdf) {
+    let extractedText = ''
+    let pdfError = null
+
+    // Try pdf-parse first
+    try {
+      const pdfData = await pdf(fileBuffer)
+      extractedText = pdfData.text || ''
+      if (extractedText.trim().length > 0) {
+        return extractedText
+      }
+    } catch (error) {
+      pdfError = error
+    }
+
+    // Fall back to OCR if pdf-parse failed or returned no text
+    try {
+      const worker = await createWorker('eng')
+      const { data: { text } } = await worker.recognize(fileBuffer)
+      await worker.terminate()
+      if (text && text.trim().length > 0) {
+        return text
+      }
+      return extractedText || '' // Return whatever pdf-parse got, even if empty
+    } catch (ocrError) {
+      // If both methods failed, return whatever we got from pdf-parse (might be empty)
+      if (extractedText) {
+        return extractedText
+      }
+      throw new Error(`Failed to extract text from PDF. pdf-parse error: ${pdfError?.message || 'unknown'}, OCR error: ${ocrError.message}`)
+    }
+  } else {
+    return fileBuffer.toString('utf-8')
   }
 }
 
@@ -99,7 +149,6 @@ async function validateDocument(documentType, s3Key) {
       extractedData
     }
   } catch (error) {
-    console.error('OCR validation error for', documentType, ':', error)
     return {
       isValid: false,
       reason: `Could not extract text from ${documentType}. ${error.message || 'Please ensure the document is clear and readable.'}`,

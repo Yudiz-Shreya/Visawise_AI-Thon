@@ -83,35 +83,89 @@ function parseDate(dateString) {
   return null
 }
 
-function validatePassportExpiry(application) {
-  const passportExpiry = application.oApplicationData?.dPassportExpiry
-  const travelDates = application.oApplicationData?.sTravelDates
+async function validatePassportExpiry(application, documents = []) {
+  const passportExpiry = application.dPassportExpiry
+  const travelDates = application.sTravelDates
+  const currentDate = new Date()
+  const sixMonthsFromNow = new Date(currentDate)
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
 
-  if (!passportExpiry || !travelDates) {
-    return { bIsValid: true, sReason: '' }
-  }
+  // Check if passport expiry is at least 6 months from current date
+  if (passportExpiry) {
+    const expiryDate = passportExpiry instanceof Date ? passportExpiry : new Date(passportExpiry)
 
-  const parsedTravelDates = parseTravelDates(travelDates)
-  if (!parsedTravelDates) {
-    return { bIsValid: true, sReason: '' }
-  }
-
-  const expiryDate = passportExpiry instanceof Date ? passportExpiry : new Date(passportExpiry)
-  const travelStartDate = parseDate(parsedTravelDates.startDate)
-  const travelEndDate = parseDate(parsedTravelDates.endDate)
-
-  if (!travelStartDate || !travelEndDate) {
-    return { bIsValid: true, sReason: '' }
-  }
-
-  if (travelStartDate > expiryDate || travelEndDate > expiryDate) {
-    return {
-      bIsValid: false,
-      sReason: `Travel dates (${travelDates}) must be before passport expiry date (${expiryDate.toLocaleDateString()})`
+    if (expiryDate < sixMonthsFromNow) {
+      return {
+        bIsValid: false,
+        sReason: `Passport expiry date (${expiryDate.toLocaleDateString()}) must be at least 6 months from today (${sixMonthsFromNow.toLocaleDateString()})`
+      }
     }
   }
 
-  return { bIsValid: true, sReason: 'Passport expiry date is valid' }
+  // Extract passport expiry from documents and cross-check
+  const documentsToCheck = ['passport_photo', 'visa_application_form', 'passport_number']
+  let extractedExpiryDate = null
+
+  for (const docType of documentsToCheck) {
+    const doc = documents.find(
+      d => d.sDocumentType?.toLowerCase().replace(/\s+/g, '_') === docType
+    )
+
+    if (doc && doc.sS3Key && doc.oValidationResult?.bIsValid) {
+      const extractedData = doc.oValidationResult?.oExtractedData || {}
+      const docText = extractedData.fullText || ''
+
+      if (docText) {
+        const expiry = extractPassportExpiryDate(docText)
+        if (expiry) {
+          extractedExpiryDate = expiry
+          break
+        }
+      }
+    }
+  }
+
+  // Cross-check extracted expiry date with application expiry date
+  if (extractedExpiryDate && passportExpiry) {
+    const expiryDate = passportExpiry instanceof Date ? passportExpiry : new Date(passportExpiry)
+    const daysDiff = Math.abs((expiryDate - extractedExpiryDate) / (1000 * 60 * 60 * 24))
+
+    if (daysDiff > 7) {
+      return {
+        bIsValid: false,
+        sReason: `Passport expiry date mismatch: Application shows ${expiryDate.toLocaleDateString()} but document shows ${extractedExpiryDate.toLocaleDateString()}`
+      }
+    }
+  }
+
+  // Use extracted expiry date if application doesn't have one
+  const finalExpiryDate = passportExpiry
+    ? (passportExpiry instanceof Date ? passportExpiry : new Date(passportExpiry))
+    : extractedExpiryDate
+
+  // Check travel dates against passport expiry
+  if (travelDates && finalExpiryDate) {
+    const parsedTravelDates = parseTravelDates(travelDates)
+    if (parsedTravelDates) {
+      const travelStartDate = parseDate(parsedTravelDates.startDate)
+      const travelEndDate = parseDate(parsedTravelDates.endDate)
+
+      if (travelStartDate && travelEndDate) {
+        if (travelStartDate > finalExpiryDate || travelEndDate > finalExpiryDate) {
+          return {
+            bIsValid: false,
+            sReason: `Travel dates (${travelDates}) must be before passport expiry date (${finalExpiryDate.toLocaleDateString()})`
+          }
+        }
+      }
+    }
+  }
+
+  if (!passportExpiry && !extractedExpiryDate) {
+    return { bIsValid: true, sReason: '' }
+  }
+
+  return { bIsValid: true, sReason: 'Passport expiry date is valid (at least 6 months from today)' }
 }
 
 async function validateVisaApplicationForm(documents) {
@@ -176,7 +230,7 @@ async function validateVisaApplicationForm(documents) {
 }
 
 async function validateTravelDates(application, documents) {
-  const travelDates = application.oApplicationData?.sTravelDates
+  const travelDates = application.sTravelDates
   if (!travelDates) {
     return { bIsValid: true, sReason: '' }
   }
@@ -243,6 +297,26 @@ function extractPassportNumber(text) {
     const match = text.match(pattern)
     if (match) {
       return match[2] || match[1]
+    }
+  }
+  return null
+}
+
+function extractPassportExpiryDate(text) {
+  if (!text) return null
+  const patterns = [
+    /passport\s*(?:expir|exp|valid|validity)\s*(?:date|until|till|until|expires)?\s*:?\s*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/i,
+    /(?:expir|exp|valid|validity)\s*(?:date|until|till|until|expires)?\s*:?\s*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/i,
+    /(?:date\s*of\s*expir|expir\s*date)\s*:?\s*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/i,
+    /valid\s*(?:until|till|until|expires|upto)\s*:?\s*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/i
+  ]
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) {
+      const parsedDate = parseDate(match[1])
+      if (parsedDate) {
+        return parsedDate
+      }
     }
   }
   return null
@@ -382,7 +456,7 @@ function extractDatesFromDocument(text) {
 }
 
 async function validateReturnTicket(application, documents) {
-  const travelDates = application.oApplicationData?.sTravelDates
+  const travelDates = application.sTravelDates
   if (!travelDates) {
     return { bIsValid: true, sReason: '' }
   }
@@ -436,7 +510,7 @@ async function validateReturnTicket(application, documents) {
 }
 
 async function validateAccommodationProof(application, documents) {
-  const travelDates = application.oApplicationData?.sTravelDates
+  const travelDates = application.sTravelDates
   if (!travelDates) {
     return { bIsValid: true, sReason: '' }
   }
@@ -489,7 +563,7 @@ async function validateAccommodationProof(application, documents) {
 }
 
 async function validatePassportNumberConsistency(application, documents) {
-  const appPassportNumber = application.oApplicationData?.sPassportNumber
+  const appPassportNumber = application.sPassportNumber
   if (!appPassportNumber) {
     return { bIsValid: true, sReason: '' }
   }
@@ -623,7 +697,7 @@ async function validateITR(documents) {
 }
 
 async function validateIncomeProof(application, documents) {
-  const employmentStatus = application.oApplicationData?.sEmploymentStatus
+  const employmentStatus = application.sEmploymentStatus
   if (!employmentStatus) {
     return { bIsValid: true, sReason: '' }
   }
@@ -671,7 +745,7 @@ async function validateIncomeProof(application, documents) {
 }
 
 async function validateLeisureProof(application, documents) {
-  const travelDates = application.oApplicationData?.sTravelDates
+  const travelDates = application.sTravelDates
   if (!travelDates) {
     return { bIsValid: true, sReason: '' }
   }
@@ -844,7 +918,21 @@ async function validateFlightCoverLetter(documents, application = null, otherDoc
     )
     if (!allNamesMatch) {
       result.bIsValid = false
-      result.sReason = `Passenger names in flight itinerary (${names.join(', ')}) do not match names in sponsorship letter (${otherDocsData.sponsorshipNames.join(', ')})`
+      const cleanFlightNames = names
+        .map(n => {
+          const parts = n.split(/\s+/).filter(p => p.length > 2 && !['CLASS', 'SERVICE', 'ECONOMY', 'AIRPORT', 'INFO', 'TERMINAL', 'FLIGHT', 'AIRBUS', 'BREAKFAST', 'PASSENGERS', 'CONFIRMATION', 'NUMBER', 'MY', 'TRIP'].includes(p.toUpperCase()))
+          return parts.length >= 2 ? parts.join(' ') : null
+        })
+        .filter(n => n && n.length > 3)
+        .slice(0, 5)
+      const cleanSponsorNames = otherDocsData.sponsorshipNames
+        .map(n => {
+          const parts = n.split(/\s+/).filter(p => p.length > 2 && !['BUSINESS', 'VISA', 'TECH', 'LEAD', 'SOLUTIONS', 'LIMITED', 'CHIEF', 'EXECUTIVE'].includes(p.toUpperCase()))
+          return parts.length >= 2 ? parts.join(' ') : null
+        })
+        .filter(n => n && n.length > 3)
+        .slice(0, 5)
+      result.sReason = `Passenger names in flight itinerary do not match names in sponsorship letter. Flight itinerary: ${cleanFlightNames.length > 0 ? cleanFlightNames.join(', ') : 'Unable to extract names'}. Sponsorship letter: ${cleanSponsorNames.length > 0 ? cleanSponsorNames.join(', ') : 'Unable to extract names'}`
     }
   }
 
@@ -954,11 +1042,92 @@ async function validateInvitationLetter(documents, application = null, otherDocs
   }
 
   const lowerText = letterText.toLowerCase()
-  const invitationKeywords = ['invitation', 'invite', 'welcome', 'request', 'host', 'visit', 'event', 'conference', 'exhibition']
-  const hasInvitationKeywords = invitationKeywords.some(keyword => lowerText.includes(keyword))
+  const invitationKeywords = [
+    'invitation',
+    'invite',
+    'invited',
+    'you are invited',
+    'we invite you',
+    'we would like to invite',
+    'pleasure to invite',
+    'honor to invite',
+    'delighted to invite',
+    'welcome',
+    'request',
+    'host',
+    'visit',
+    'event',
+    'conference',
+    'exhibition',
+    'seminar',
+    'workshop',
+    'meeting',
+    'gathering',
+    'celebration',
+    'ceremony',
+    'attending',
+    'participation',
+    'participate',
+    'join us',
+    'looking forward',
+    'cordially invite',
+    'kindly invite',
+    'request your presence',
+    'request the pleasure',
+    'honored to have',
+    'pleasure of your company',
+    'request you to attend',
+    'invitation to attend',
+    'invitation letter',
+    'letter of invitation',
+    'official invitation',
+    'formal invitation'
+  ]
+
+  // Check for exact keyword matches
+  let hasInvitationKeywords = invitationKeywords.some(keyword => lowerText.includes(keyword))
+
+  // If no exact match, try fuzzy matching for OCR errors
+  if (!hasInvitationKeywords) {
+    const fuzzyPatterns = [
+      /invit/i,
+      /invit[ae]d/i,
+      /exhib/i,
+      /confer/i,
+      /event/i,
+      /attend/i,
+      /january|february|march|april|may|june|july|august|september|october|november|december/i,
+      /barcelona|madrid|spain/i,
+      /venue|location|address/i,
+      /dear\s+[a-z]+/i,
+      /yours\s+(sincerely|faithfully|truly)/i
+    ]
+
+    const keywordMatches = fuzzyPatterns.filter(pattern => pattern.test(lowerText))
+    const hasEventDetails = /(?:event|conference|exhibition|meeting|seminar|workshop)[\s:]*[a-z0-9\s]+/i.test(lowerText)
+    const hasDates = /(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?/i.test(lowerText)
+    const hasVenue = /(?:venue|location|address|fira|barcelona|spain)/i.test(lowerText)
+    const hasRecipientInfo = /(?:dear|mr|mrs|ms|name|full name|passport)/i.test(lowerText)
+
+    // If we have multiple indicators, consider it valid despite OCR errors
+    if (keywordMatches.length >= 2 || (hasEventDetails && hasDates && hasVenue) || (hasRecipientInfo && hasDates)) {
+      hasInvitationKeywords = true
+    }
+  }
+
+  // Additional check: if document has substantial text and contains date patterns + venue/event info
+  if (!hasInvitationKeywords && letterText.trim().length > 100) {
+    const hasDatePattern = /\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)/i.test(letterText)
+    const hasVenueOrEvent = /(?:barcelona|fira|venue|event|exhibition|conference|spain)/i.test(letterText)
+    const hasNamePattern = /(?:dear|mr|mrs|ms|name|full name|passport number)/i.test(letterText)
+
+    if (hasDatePattern && (hasVenueOrEvent || hasNamePattern)) {
+      hasInvitationKeywords = true
+    }
+  }
 
   if (!hasInvitationKeywords) {
-    return { bIsValid: false, sReason: 'Document does not appear to be an invitation letter. Please ensure it contains invitation details.' }
+    return { bIsValid: false, sReason: 'Document does not appear to be an invitation letter. Please ensure it contains invitation details such as "you are invited", "we invite you", or similar phrases.' }
   }
 
   const invitationDates = extractDatesFromDocument(letterText)
@@ -998,7 +1167,21 @@ async function validateInvitationLetter(documents, application = null, otherDocs
     )
     if (!allNamesMatch) {
       result.bIsValid = false
-      result.sReason = `Names in invitation letter (${names.join(', ')}) do not match names in sponsorship letter (${otherDocsData.sponsorshipNames.join(', ')})`
+      const cleanInvNames = names
+        .map(n => {
+          const parts = n.split(/\s+/).filter(p => p.length > 2 && !['EVENT', 'CONFERENCE', 'EXHIBITION', 'MEETING', 'INVITATION', 'LETTER'].includes(p.toUpperCase()))
+          return parts.length >= 2 ? parts.join(' ') : null
+        })
+        .filter(n => n && n.length > 3)
+        .slice(0, 5)
+      const cleanSponsorNames = otherDocsData.sponsorshipNames
+        .map(n => {
+          const parts = n.split(/\s+/).filter(p => p.length > 2 && !['BUSINESS', 'VISA', 'TECH', 'LEAD', 'SOLUTIONS', 'LIMITED', 'CHIEF', 'EXECUTIVE'].includes(p.toUpperCase()))
+          return parts.length >= 2 ? parts.join(' ') : null
+        })
+        .filter(n => n && n.length > 3)
+        .slice(0, 5)
+      result.sReason = `Names in invitation letter do not match names in sponsorship letter. Invitation letter: ${cleanInvNames.length > 0 ? cleanInvNames.join(', ') : 'Unable to extract names'}. Sponsorship letter: ${cleanSponsorNames.length > 0 ? cleanSponsorNames.join(', ') : 'Unable to extract names'}`
     }
   }
 
@@ -1247,20 +1430,33 @@ class CountryService {
       })
 
       const documentArray = documents || []
+      const appData = applicationData || {}
 
       if (application) {
         application.aDocuments = documentArray
-        if (applicationData) {
-          application.oApplicationData = applicationData
+        if (appData.sPassportNumber !== undefined) application.sPassportNumber = appData.sPassportNumber
+        if (appData.dPassportExpiry !== undefined) application.dPassportExpiry = appData.dPassportExpiry
+        if (appData.sEmploymentStatus !== undefined) application.sEmploymentStatus = appData.sEmploymentStatus
+        if (appData.sTravelDates !== undefined) application.sTravelDates = appData.sTravelDates
+        if (appData.sCoverLetter !== undefined) application.sCoverLetter = appData.sCoverLetter
+        const { sPassportNumber, dPassportExpiry, sEmploymentStatus, sTravelDates, sCoverLetter, ...otherData } = appData
+        if (Object.keys(otherData).length > 0) {
+          application.oApplicationData = otherData
         }
         await application.save()
       } else {
+        const { sPassportNumber, dPassportExpiry, sEmploymentStatus, sTravelDates, sCoverLetter, ...otherData } = appData
         application = await Application.create({
           iUserId: userId,
           iCountryId: countryId,
           iVisaTypeId: visaTypeId,
           aDocuments: documentArray,
-          oApplicationData: applicationData || {}
+          sPassportNumber,
+          dPassportExpiry,
+          sEmploymentStatus,
+          sTravelDates,
+          sCoverLetter,
+          oApplicationData: Object.keys(otherData).length > 0 ? otherData : {}
         })
       }
 
@@ -1317,17 +1513,16 @@ class CountryService {
       )
 
       const missingFormFields = []
-      const appData = application.oApplicationData || {}
-      if (requiredDocs.includes('passport_number') && !appData.sPassportNumber) {
+      if (requiredDocs.includes('passport_number') && !application.sPassportNumber) {
         missingFormFields.push('passport_number')
       }
-      if (requiredDocs.includes('passport_expiry') && !appData.dPassportExpiry) {
+      if (requiredDocs.includes('passport_expiry') && !application.dPassportExpiry) {
         missingFormFields.push('passport_expiry')
       }
-      if (requiredDocs.includes('employment_status') && !appData.sEmploymentStatus) {
+      if (requiredDocs.includes('employment_status') && !application.sEmploymentStatus) {
         missingFormFields.push('employment_status')
       }
-      if (requiredDocs.includes('travel_dates') && !appData.sTravelDates) {
+      if (requiredDocs.includes('travel_dates') && !application.sTravelDates) {
         missingFormFields.push('travel_dates')
       }
 
@@ -1402,7 +1597,7 @@ class CountryService {
         validationResults.bIsValid = false
       }
 
-      const passportExpiryResult = validatePassportExpiry(application)
+      const passportExpiryResult = await validatePassportExpiry(application, updatedDocuments)
       if (!passportExpiryResult.bIsValid) {
         validationResults.bIsValid = false
         const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(

@@ -56,26 +56,24 @@ const applicationSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
-  oApplicationData: {
-    sPassportNumber: {
-      type: String,
-      trim: true
-    },
-    dPassportExpiry: {
-      type: Date
-    },
-    sEmploymentStatus: {
-      type: String,
-      trim: true
-    },
-    sTravelDates: {
-      type: String,
-      trim: true
-    },
-    sCoverLetter: {
-      type: String,
-      trim: true
-    }
+  sPassportNumber: {
+    type: String,
+    trim: true
+  },
+  dPassportExpiry: {
+    type: Date
+  },
+  sEmploymentStatus: {
+    type: String,
+    trim: true
+  },
+  sTravelDates: {
+    type: String,
+    trim: true
+  },
+  sCoverLetter: {
+    type: String,
+    trim: true
   },
   eStatus: {
     type: String,
