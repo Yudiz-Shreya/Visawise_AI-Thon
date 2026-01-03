@@ -4,7 +4,7 @@ const { DB } = require('../../databse/mongoose')
 const visaTypeSchema = new mongoose.Schema({
   iCountryId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Country',
+    ref: 'countries',
     required: true,
     index: true
   },

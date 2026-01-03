@@ -4,19 +4,19 @@ const { DB } = require('../../databse/mongoose')
 const applicationSchema = new mongoose.Schema({
   iUserId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'users',
     required: true,
     index: true
   },
   iCountryId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Country',
+    ref: 'countries',
     required: true,
     index: true
   },
   iVisaTypeId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'VisaType',
+    ref: 'visatypes',
     required: true,
     index: true
   },
@@ -116,4 +116,3 @@ applicationSchema.index({ eStatus: 1 })
 const Application = DB.model('Application', applicationSchema)
 
 module.exports = Application
-

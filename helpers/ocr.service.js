@@ -3,61 +3,6 @@ const { s3Client } = require('./s3.service')
 const { GetObjectCommand } = require('@aws-sdk/client-s3')
 const config = require('../config/config')
 
-const DOCUMENT_PATTERNS = {
-  passport_number: {
-    keywords: ['passport', 'republic', 'passport number', 'passport no'],
-    fields: ['passport_number']
-  },
-  passport_expiry: {
-    keywords: ['passport', 'expiry', 'expiration', 'valid until', 'date of expiry'],
-    fields: ['passport_expiry']
-  },
-  passport_photo: {
-    keywords: ['passport', 'photo', 'photograph', 'picture'],
-    fields: []
-  },
-  visa_application_form: {
-    keywords: ['visa', 'application', 'form', 'visa application form'],
-    fields: []
-  },
-  cover_letter: {
-    keywords: ['cover letter', 'purpose', 'travel', 'visa application', 'letter'],
-    fields: ['travel_date', 'departure_date', 'arrival_date', 'visit_date']
-  },
-  accommodation_proof: {
-    keywords: ['hotel', 'booking', 'accommodation', 'reservation', 'check-in', 'check-out', 'lodging'],
-    fields: ['hotel_name', 'check_in', 'check_out']
-  },
-  bank_statements: {
-    keywords: ['bank', 'statement', 'account', 'balance', 'transaction', 'banking'],
-    fields: ['account_number', 'bank_name', 'balance']
-  },
-  income_proof: {
-    keywords: ['income', 'salary', 'earning', 'pay', 'wage', 'compensation'],
-    fields: ['income_amount', 'employer']
-  },
-  itr: {
-    keywords: ['income tax', 'itr', 'assessment', 'pan', 'financial year', 'tax return'],
-    fields: ['pan_number', 'assessment_year', 'total_income']
-  },
-  employment_status: {
-    keywords: ['employment', 'employer', 'salary', 'designation', 'company', 'job', 'occupation'],
-    fields: ['employer_name', 'designation', 'salary']
-  },
-  travel_dates: {
-    keywords: ['travel', 'date', 'departure', 'arrival', 'journey', 'trip'],
-    fields: ['departure_date', 'arrival_date']
-  },
-  leisure_proof: {
-    keywords: ['itinerary', 'travel plan', 'schedule', 'tour', 'sightseeing', 'leisure'],
-    fields: []
-  },
-  return_ticket: {
-    keywords: ['ticket', 'flight', 'airline', 'departure', 'arrival', 'return', 'onward'],
-    fields: ['airline', 'departure_date', 'arrival_date', 'ticket_number']
-  }
-}
-
 async function extractTextFromS3(s3Key) {
   try {
     const command = new GetObjectCommand({
@@ -113,28 +58,12 @@ async function validateDocument(documentType, s3Key) {
       }
     }
 
-    const normalizedDocType = documentType.toLowerCase().replace(/\s+/g, '_')
-    const pattern = DOCUMENT_PATTERNS[normalizedDocType] || DOCUMENT_PATTERNS[documentType.toLowerCase()]
-
-    if (!pattern) {
-      return {
-        isValid: true,
-        reason: `Document type ${documentType} validation skipped (pattern not defined)`,
-        extractedData: {}
-      }
-    }
-
     const extractedText = await extractTextFromS3(s3Key)
-    const lowerContent = extractedText.toLowerCase()
 
-    const foundKeywords = pattern.keywords.filter(keyword =>
-      lowerContent.includes(keyword.toLowerCase())
-    )
-
-    if (foundKeywords.length < 2) {
+    if (!extractedText || extractedText.trim().length === 0) {
       return {
         isValid: false,
-        reason: `Document does not contain required keywords for ${documentType}. Found: ${foundKeywords.length} of ${pattern.keywords.length} required keywords`,
+        reason: `Could not extract text from ${documentType}. Please ensure the document is clear and readable.`,
         extractedData: {}
       }
     }
@@ -142,13 +71,6 @@ async function validateDocument(documentType, s3Key) {
     const extractedData = {
       fullText: extractedText
     }
-    pattern.fields.forEach(field => {
-      const regex = new RegExp(`${field.replace(/_/g, '\\s*')}[\\s:]*([A-Z0-9\\s,.-]+)`, 'i')
-      const match = extractedText.match(regex)
-      if (match) {
-        extractedData[field] = match[1].trim()
-      }
-    })
 
     return {
       isValid: true,
@@ -166,6 +88,5 @@ async function validateDocument(documentType, s3Key) {
 }
 
 module.exports = {
-  validateDocument,
-  DOCUMENT_PATTERNS
+  validateDocument
 }
