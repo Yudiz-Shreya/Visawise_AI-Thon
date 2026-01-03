@@ -30,10 +30,6 @@ const applicationSchema = new mongoose.Schema({
       type: String,
       trim: true
     },
-    sS3Url: {
-      type: String,
-      trim: true
-    },
     bIsValidated: {
       type: Boolean,
       default: false

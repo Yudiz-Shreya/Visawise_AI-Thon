@@ -1275,6 +1275,471 @@ async function validateAcademicCertificate(documents) {
   return { bIsValid: true, sReason: 'Academic certificate is valid' }
 }
 
+async function performValidation(application) {
+  await application.populate('iVisaTypeId', 'aRequiredDocuments nDocumentsRequired sType')
+
+  const visaType = application.iVisaTypeId
+  const visaTypeName = visaType?.sType || ''
+  const requiredDocs = visaType.aRequiredDocuments.map(doc => doc.sName.toLowerCase().replace(/\s+/g, '_'))
+  const uploadedDocs = application.aDocuments.map(doc => doc.sDocumentType.toLowerCase().replace(/\s+/g, '_'))
+
+  let visaSpecificRequiredDocs = []
+  if (visaTypeName === 'Business') {
+    visaSpecificRequiredDocs = ['sponsorship_letter', 'flight_cover_letter', 'travel_insurance', 'invitation_letter']
+  } else if (visaTypeName === 'Student') {
+    visaSpecificRequiredDocs = ['fee_receipt', 'academic_certificate']
+  }
+
+  const formFields = ['passport_number', 'passport_expiry', 'employment_status', 'travel_dates']
+  const documentFields = visaSpecificRequiredDocs.length > 0
+    ? visaSpecificRequiredDocs
+    : requiredDocs.filter(doc => !formFields.includes(doc))
+
+  const missingDocuments = documentFields.filter(
+    doc => !uploadedDocs.includes(doc)
+  )
+
+  const missingFormFields = []
+  if (requiredDocs.includes('passport_number') && !application.sPassportNumber) {
+    missingFormFields.push('passport_number')
+  }
+  if (requiredDocs.includes('passport_expiry') && !application.dPassportExpiry) {
+    missingFormFields.push('passport_expiry')
+  }
+  if (requiredDocs.includes('employment_status') && !application.sEmploymentStatus) {
+    missingFormFields.push('employment_status')
+  }
+  if (requiredDocs.includes('travel_dates') && !application.sTravelDates) {
+    missingFormFields.push('travel_dates')
+  }
+
+  const validationResults = {
+    bIsValid: true,
+    aMissingDocuments: [],
+    aInvalidDocuments: [],
+    aValidDocuments: []
+  }
+
+  const updatedDocuments = []
+
+  for (const document of application.aDocuments) {
+    const docCopy = { ...document.toObject ? document.toObject() : document }
+
+    if (!docCopy.sS3Key) {
+      validationResults.aInvalidDocuments.push({
+        sDocumentType: docCopy.sDocumentType,
+        sReason: 'Document not uploaded'
+      })
+      validationResults.bIsValid = false
+      docCopy.bIsValidated = false
+      docCopy.oValidationResult = {
+        bIsValid: false,
+        sReason: 'Document not uploaded',
+        oExtractedData: {}
+      }
+      updatedDocuments.push(docCopy)
+      continue
+    }
+
+    const ocrResult = await validateDocument(docCopy.sDocumentType, docCopy.sS3Key)
+
+    if (ocrResult.isValid) {
+      if (!validationResults.aValidDocuments.includes(docCopy.sDocumentType)) {
+        validationResults.aValidDocuments.push(docCopy.sDocumentType)
+      }
+      docCopy.bIsValidated = true
+      docCopy.oValidationResult = {
+        bIsValid: true,
+        sReason: ocrResult.reason,
+        oExtractedData: ocrResult.extractedData
+      }
+    } else {
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === docCopy.sDocumentType
+      )
+      if (existingInvalidIndex < 0) {
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: docCopy.sDocumentType,
+          sReason: ocrResult.reason
+        })
+      }
+      const validIndex = validationResults.aValidDocuments.indexOf(docCopy.sDocumentType)
+      if (validIndex >= 0) {
+        validationResults.aValidDocuments.splice(validIndex, 1)
+      }
+      validationResults.bIsValid = false
+      docCopy.bIsValidated = false
+      docCopy.oValidationResult = {
+        bIsValid: false,
+        sReason: ocrResult.reason,
+        oExtractedData: ocrResult.extractedData
+      }
+    }
+    updatedDocuments.push(docCopy)
+  }
+
+  const allMissing = [...missingDocuments, ...missingFormFields]
+  if (allMissing.length > 0) {
+    validationResults.aMissingDocuments = allMissing
+    validationResults.bIsValid = false
+  }
+
+  const passportExpiryResult = await validatePassportExpiry(application, updatedDocuments)
+  if (!passportExpiryResult.bIsValid) {
+    validationResults.bIsValid = false
+    const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+      doc => doc.sDocumentType === 'passport_expiry'
+    )
+    if (existingInvalidIndex >= 0) {
+      validationResults.aInvalidDocuments[existingInvalidIndex].sReason = passportExpiryResult.sReason
+    } else {
+      validationResults.aInvalidDocuments.push({
+        sDocumentType: 'passport_expiry',
+        sReason: passportExpiryResult.sReason
+      })
+    }
+    if (validationResults.aMissingDocuments.includes('passport_expiry')) {
+      validationResults.aMissingDocuments = validationResults.aMissingDocuments.filter(
+        doc => doc !== 'passport_expiry'
+      )
+    }
+  }
+
+  const visaFormResult = await validateVisaApplicationForm(updatedDocuments)
+  if (!visaFormResult.bIsValid) {
+    validationResults.bIsValid = false
+    const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+      doc => doc.sDocumentType === 'visa_application_form'
+    )
+    if (existingInvalidIndex >= 0) {
+      validationResults.aInvalidDocuments[existingInvalidIndex].sReason = visaFormResult.sReason
+    } else {
+      const validIndex = validationResults.aValidDocuments.indexOf('visa_application_form')
+      if (validIndex >= 0) {
+        validationResults.aValidDocuments.splice(validIndex, 1)
+      }
+      validationResults.aInvalidDocuments.push({
+        sDocumentType: 'visa_application_form',
+        sReason: visaFormResult.sReason
+      })
+    }
+  }
+
+  if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
+    const dateMismatchResult = await validateTravelDates(application, updatedDocuments)
+    if (!dateMismatchResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'cover_letter'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = dateMismatchResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('cover_letter')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'cover_letter',
+          sReason: dateMismatchResult.sReason
+        })
+      }
+    }
+
+    const returnTicketResult = await validateReturnTicket(application, updatedDocuments)
+    if (!returnTicketResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'return_ticket'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = returnTicketResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('return_ticket')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'return_ticket',
+          sReason: returnTicketResult.sReason
+        })
+      }
+    }
+
+    const accommodationResult = await validateAccommodationProof(application, updatedDocuments)
+    if (!accommodationResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'accommodation_proof'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = accommodationResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('accommodation_proof')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'accommodation_proof',
+          sReason: accommodationResult.sReason
+        })
+      }
+    }
+
+    const bankStatementsResult = await validateBankStatements(updatedDocuments)
+    if (!bankStatementsResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'bank_statements'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = bankStatementsResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('bank_statements')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'bank_statements',
+          sReason: bankStatementsResult.sReason
+        })
+      }
+    }
+
+    const itrResult = await validateITR(updatedDocuments)
+    if (!itrResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'itr'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = itrResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('itr')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'itr',
+          sReason: itrResult.sReason
+        })
+      }
+    }
+
+    const incomeProofResult = await validateIncomeProof(application, updatedDocuments)
+    if (!incomeProofResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'income_proof'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = incomeProofResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('income_proof')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'income_proof',
+          sReason: incomeProofResult.sReason
+        })
+      }
+    }
+
+    const leisureProofResult = await validateLeisureProof(application, updatedDocuments)
+    if (!leisureProofResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'leisure_proof'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = leisureProofResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('leisure_proof')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'leisure_proof',
+          sReason: leisureProofResult.sReason
+        })
+      }
+    }
+  }
+
+  const passportNumberResult = await validatePassportNumberConsistency(application, updatedDocuments)
+  if (!passportNumberResult.bIsValid) {
+    validationResults.bIsValid = false
+    validationResults.aInvalidDocuments.push({
+      sDocumentType: 'passport_number',
+      sReason: passportNumberResult.sReason
+    })
+    const validIndex = validationResults.aValidDocuments.indexOf('passport_number')
+    if (validIndex >= 0) {
+      validationResults.aValidDocuments.splice(validIndex, 1)
+    }
+  }
+
+  if (visaTypeName === 'Business') {
+    const sponsorshipResult = await validateSponsorshipLetter(updatedDocuments, application)
+    const sponsorshipData = sponsorshipResult.extractedData || {}
+
+    if (!sponsorshipResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'sponsorship_letter'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = sponsorshipResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('sponsorship_letter')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'sponsorship_letter',
+          sReason: sponsorshipResult.sReason
+        })
+      }
+    } else if (sponsorshipResult.bIsValid) {
+      if (!validationResults.aValidDocuments.includes('sponsorship_letter')) {
+        validationResults.aValidDocuments.push('sponsorship_letter')
+      }
+    }
+
+    const otherDocsData = {
+      sponsorshipDates: sponsorshipData.travelDates || [],
+      sponsorshipNames: sponsorshipData.names || [],
+      sponsorshipCompany: sponsorshipData.companyName,
+      sponsorshipDestinations: sponsorshipData.destinations || []
+    }
+
+    const flightCoverResult = await validateFlightCoverLetter(updatedDocuments, application, otherDocsData)
+    otherDocsData.flightDates = flightCoverResult.extractedData?.flightDates || []
+    otherDocsData.flightNames = flightCoverResult.extractedData?.names || []
+
+    if (!flightCoverResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'flight_cover_letter'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = flightCoverResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('flight_cover_letter')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'flight_cover_letter',
+          sReason: flightCoverResult.sReason
+        })
+      }
+    } else if (flightCoverResult.bIsValid) {
+      if (!validationResults.aValidDocuments.includes('flight_cover_letter')) {
+        validationResults.aValidDocuments.push('flight_cover_letter')
+      }
+    }
+
+    const travelInsuranceResult = await validateTravelInsurance(updatedDocuments, application, otherDocsData)
+    if (!travelInsuranceResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'travel_insurance'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = travelInsuranceResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('travel_insurance')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'travel_insurance',
+          sReason: travelInsuranceResult.sReason
+        })
+      }
+    } else if (travelInsuranceResult.bIsValid) {
+      if (!validationResults.aValidDocuments.includes('travel_insurance')) {
+        validationResults.aValidDocuments.push('travel_insurance')
+      }
+    }
+
+    const invitationResult = await validateInvitationLetter(updatedDocuments, application, otherDocsData)
+    if (!invitationResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'invitation_letter'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = invitationResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('invitation_letter')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'invitation_letter',
+          sReason: invitationResult.sReason
+        })
+      }
+    } else if (invitationResult.bIsValid) {
+      if (!validationResults.aValidDocuments.includes('invitation_letter')) {
+        validationResults.aValidDocuments.push('invitation_letter')
+      }
+    }
+  }
+
+  if (visaTypeName === 'Student') {
+    const feeReceiptResult = await validateFeeReceipt(updatedDocuments)
+    if (!feeReceiptResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'fee_receipt'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = feeReceiptResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('fee_receipt')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'fee_receipt',
+          sReason: feeReceiptResult.sReason
+        })
+      }
+    }
+
+    const academicCertResult = await validateAcademicCertificate(updatedDocuments)
+    if (!academicCertResult.bIsValid) {
+      validationResults.bIsValid = false
+      const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
+        doc => doc.sDocumentType === 'academic_certificate'
+      )
+      if (existingInvalidIndex >= 0) {
+        validationResults.aInvalidDocuments[existingInvalidIndex].sReason = academicCertResult.sReason
+      } else {
+        const validIndex = validationResults.aValidDocuments.indexOf('academic_certificate')
+        if (validIndex >= 0) {
+          validationResults.aValidDocuments.splice(validIndex, 1)
+        }
+        validationResults.aInvalidDocuments.push({
+          sDocumentType: 'academic_certificate',
+          sReason: academicCertResult.sReason
+        })
+      }
+    }
+  }
+
+  application.aDocuments = updatedDocuments
+  application.oValidationResult = validationResults
+  application.eStatus = validationResults.bIsValid ? 'Validated' : 'Rejected'
+  await application.save()
+
+  return validationResults
+}
+
 class CountryService {
   async getCountries(req, res) {
     try {
@@ -1405,7 +1870,7 @@ class CountryService {
 
   async createOrUpdateApplication(req, res) {
     try {
-      const { userId, countryId, visaTypeId, documents, applicationData } = req.body
+      const { userId, countryId, visaTypeId, documents, applicationData, sPassportNumber, dPassportExpiry, sEmploymentStatus, sTravelDates, sCoverLetter } = req.body
 
       if (!userId || !countryId || !visaTypeId) {
         return res.status(status.BadRequest).json({
@@ -1429,8 +1894,20 @@ class CountryService {
         eStatus: 'Draft'
       })
 
-      const documentArray = documents || []
-      const appData = applicationData || {}
+      const documentArray = (documents || []).map(doc => {
+        const { sS3Url, ...docWithoutUrl } = doc
+        return docWithoutUrl
+      })
+
+      // Merge top-level fields with applicationData (top-level takes precedence)
+      const appData = {
+        ...(applicationData || {}),
+        ...(sPassportNumber !== undefined && { sPassportNumber }),
+        ...(dPassportExpiry !== undefined && { dPassportExpiry }),
+        ...(sEmploymentStatus !== undefined && { sEmploymentStatus }),
+        ...(sTravelDates !== undefined && { sTravelDates }),
+        ...(sCoverLetter !== undefined && { sCoverLetter })
+      }
 
       if (application) {
         application.aDocuments = documentArray
@@ -1460,10 +1937,12 @@ class CountryService {
         })
       }
 
+      // Perform validation
+      const validationResults = await performValidation(application)
+
       return res.status(status.OK).json({
         status: status.OK,
-        message: 'Application saved successfully',
-        data: application
+        data: validationResults
       })
     } catch (error) {
       return catchError('CountryService.createOrUpdateApplication', error, req, res)
@@ -1482,7 +1961,6 @@ class CountryService {
       }
 
       const application = await Application.findById(applicationId)
-        .populate('iVisaTypeId', 'aRequiredDocuments nDocumentsRequired sType')
 
       if (!application) {
         return res.status(status.NotFound).json({
@@ -1491,466 +1969,7 @@ class CountryService {
         })
       }
 
-      const visaType = application.iVisaTypeId
-      const visaTypeName = visaType?.sType || ''
-      const requiredDocs = visaType.aRequiredDocuments.map(doc => doc.sName.toLowerCase().replace(/\s+/g, '_'))
-      const uploadedDocs = application.aDocuments.map(doc => doc.sDocumentType.toLowerCase().replace(/\s+/g, '_'))
-
-      let visaSpecificRequiredDocs = []
-      if (visaTypeName === 'Business') {
-        visaSpecificRequiredDocs = ['sponsorship_letter', 'flight_cover_letter', 'travel_insurance', 'invitation_letter']
-      } else if (visaTypeName === 'Student') {
-        visaSpecificRequiredDocs = ['fee_receipt', 'academic_certificate']
-      }
-
-      const formFields = ['passport_number', 'passport_expiry', 'employment_status', 'travel_dates']
-      const documentFields = visaSpecificRequiredDocs.length > 0
-        ? visaSpecificRequiredDocs
-        : requiredDocs.filter(doc => !formFields.includes(doc))
-
-      const missingDocuments = documentFields.filter(
-        doc => !uploadedDocs.includes(doc)
-      )
-
-      const missingFormFields = []
-      if (requiredDocs.includes('passport_number') && !application.sPassportNumber) {
-        missingFormFields.push('passport_number')
-      }
-      if (requiredDocs.includes('passport_expiry') && !application.dPassportExpiry) {
-        missingFormFields.push('passport_expiry')
-      }
-      if (requiredDocs.includes('employment_status') && !application.sEmploymentStatus) {
-        missingFormFields.push('employment_status')
-      }
-      if (requiredDocs.includes('travel_dates') && !application.sTravelDates) {
-        missingFormFields.push('travel_dates')
-      }
-
-      const validationResults = {
-        bIsValid: true,
-        aMissingDocuments: [],
-        aInvalidDocuments: [],
-        aValidDocuments: []
-      }
-
-      const updatedDocuments = []
-
-      for (const document of application.aDocuments) {
-        const docCopy = { ...document.toObject ? document.toObject() : document }
-
-        if (!docCopy.sS3Key) {
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: docCopy.sDocumentType,
-            sReason: 'Document not uploaded'
-          })
-          validationResults.bIsValid = false
-          docCopy.bIsValidated = false
-          docCopy.oValidationResult = {
-            bIsValid: false,
-            sReason: 'Document not uploaded',
-            oExtractedData: {}
-          }
-          updatedDocuments.push(docCopy)
-          continue
-        }
-
-        const ocrResult = await validateDocument(docCopy.sDocumentType, docCopy.sS3Key)
-
-        if (ocrResult.isValid) {
-          if (!validationResults.aValidDocuments.includes(docCopy.sDocumentType)) {
-            validationResults.aValidDocuments.push(docCopy.sDocumentType)
-          }
-          docCopy.bIsValidated = true
-          docCopy.oValidationResult = {
-            bIsValid: true,
-            sReason: ocrResult.reason,
-            oExtractedData: ocrResult.extractedData
-          }
-        } else {
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === docCopy.sDocumentType
-          )
-          if (existingInvalidIndex < 0) {
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: docCopy.sDocumentType,
-              sReason: ocrResult.reason
-            })
-          }
-          const validIndex = validationResults.aValidDocuments.indexOf(docCopy.sDocumentType)
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
-          }
-          validationResults.bIsValid = false
-          docCopy.bIsValidated = false
-          docCopy.oValidationResult = {
-            bIsValid: false,
-            sReason: ocrResult.reason,
-            oExtractedData: ocrResult.extractedData
-          }
-        }
-        updatedDocuments.push(docCopy)
-      }
-
-      const allMissing = [...missingDocuments, ...missingFormFields]
-      if (allMissing.length > 0) {
-        validationResults.aMissingDocuments = allMissing
-        validationResults.bIsValid = false
-      }
-
-      const passportExpiryResult = await validatePassportExpiry(application, updatedDocuments)
-      if (!passportExpiryResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'passport_expiry'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = passportExpiryResult.sReason
-        } else {
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'passport_expiry',
-            sReason: passportExpiryResult.sReason
-          })
-        }
-        if (validationResults.aMissingDocuments.includes('passport_expiry')) {
-          validationResults.aMissingDocuments = validationResults.aMissingDocuments.filter(
-            doc => doc !== 'passport_expiry'
-          )
-        }
-      }
-
-      const visaFormResult = await validateVisaApplicationForm(updatedDocuments)
-      if (!visaFormResult.bIsValid) {
-        validationResults.bIsValid = false
-        const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-          doc => doc.sDocumentType === 'visa_application_form'
-        )
-        if (existingInvalidIndex >= 0) {
-          validationResults.aInvalidDocuments[existingInvalidIndex].sReason = visaFormResult.sReason
-        } else {
-          const validIndex = validationResults.aValidDocuments.indexOf('visa_application_form')
-          if (validIndex >= 0) {
-            validationResults.aValidDocuments.splice(validIndex, 1)
-          }
-          validationResults.aInvalidDocuments.push({
-            sDocumentType: 'visa_application_form',
-            sReason: visaFormResult.sReason
-          })
-        }
-      }
-
-      if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
-        const dateMismatchResult = await validateTravelDates(application, updatedDocuments)
-        if (!dateMismatchResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'cover_letter'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = dateMismatchResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('cover_letter')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'cover_letter',
-              sReason: dateMismatchResult.sReason
-            })
-          }
-        }
-      }
-
-      if (visaTypeName !== 'Business' && visaTypeName !== 'Student') {
-        const returnTicketResult = await validateReturnTicket(application, updatedDocuments)
-        if (!returnTicketResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'return_ticket'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = returnTicketResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('return_ticket')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'return_ticket',
-              sReason: returnTicketResult.sReason
-            })
-          }
-        }
-
-        const accommodationResult = await validateAccommodationProof(application, updatedDocuments)
-        if (!accommodationResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'accommodation_proof'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = accommodationResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('accommodation_proof')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'accommodation_proof',
-              sReason: accommodationResult.sReason
-            })
-          }
-        }
-
-        const bankStatementsResult = await validateBankStatements(updatedDocuments)
-        if (!bankStatementsResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'bank_statements'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = bankStatementsResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('bank_statements')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'bank_statements',
-              sReason: bankStatementsResult.sReason
-            })
-          }
-        }
-
-        const itrResult = await validateITR(updatedDocuments)
-        if (!itrResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'itr'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = itrResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('itr')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'itr',
-              sReason: itrResult.sReason
-            })
-          }
-        }
-
-        const incomeProofResult = await validateIncomeProof(application, updatedDocuments)
-        if (!incomeProofResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'income_proof'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = incomeProofResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('income_proof')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'income_proof',
-              sReason: incomeProofResult.sReason
-            })
-          }
-        }
-
-        const leisureProofResult = await validateLeisureProof(application, updatedDocuments)
-        if (!leisureProofResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'leisure_proof'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = leisureProofResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('leisure_proof')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'leisure_proof',
-              sReason: leisureProofResult.sReason
-            })
-          }
-        }
-      }
-
-      const passportNumberResult = await validatePassportNumberConsistency(application, updatedDocuments)
-      if (!passportNumberResult.bIsValid) {
-        validationResults.bIsValid = false
-        validationResults.aInvalidDocuments.push({
-          sDocumentType: 'passport_number',
-          sReason: passportNumberResult.sReason
-        })
-        const validIndex = validationResults.aValidDocuments.indexOf('passport_number')
-        if (validIndex >= 0) {
-          validationResults.aValidDocuments.splice(validIndex, 1)
-        }
-      }
-
-      if (visaTypeName === 'Business') {
-        const sponsorshipResult = await validateSponsorshipLetter(updatedDocuments, application)
-        const sponsorshipData = sponsorshipResult.extractedData || {}
-
-        if (!sponsorshipResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'sponsorship_letter'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = sponsorshipResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('sponsorship_letter')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'sponsorship_letter',
-              sReason: sponsorshipResult.sReason
-            })
-          }
-        } else if (sponsorshipResult.bIsValid) {
-          if (!validationResults.aValidDocuments.includes('sponsorship_letter')) {
-            validationResults.aValidDocuments.push('sponsorship_letter')
-          }
-        }
-
-        const otherDocsData = {
-          sponsorshipDates: sponsorshipData.travelDates || [],
-          sponsorshipNames: sponsorshipData.names || [],
-          sponsorshipCompany: sponsorshipData.companyName,
-          sponsorshipDestinations: sponsorshipData.destinations || []
-        }
-
-        const flightCoverResult = await validateFlightCoverLetter(updatedDocuments, application, otherDocsData)
-        otherDocsData.flightDates = flightCoverResult.extractedData?.flightDates || []
-        otherDocsData.flightNames = flightCoverResult.extractedData?.names || []
-
-        if (!flightCoverResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'flight_cover_letter'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = flightCoverResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('flight_cover_letter')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'flight_cover_letter',
-              sReason: flightCoverResult.sReason
-            })
-          }
-        } else if (flightCoverResult.bIsValid) {
-          if (!validationResults.aValidDocuments.includes('flight_cover_letter')) {
-            validationResults.aValidDocuments.push('flight_cover_letter')
-          }
-        }
-
-        const travelInsuranceResult = await validateTravelInsurance(updatedDocuments, application, otherDocsData)
-        if (!travelInsuranceResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'travel_insurance'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = travelInsuranceResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('travel_insurance')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'travel_insurance',
-              sReason: travelInsuranceResult.sReason
-            })
-          }
-        } else if (travelInsuranceResult.bIsValid) {
-          if (!validationResults.aValidDocuments.includes('travel_insurance')) {
-            validationResults.aValidDocuments.push('travel_insurance')
-          }
-        }
-
-        const invitationResult = await validateInvitationLetter(updatedDocuments, application, otherDocsData)
-        if (!invitationResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'invitation_letter'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = invitationResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('invitation_letter')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'invitation_letter',
-              sReason: invitationResult.sReason
-            })
-          }
-        } else if (invitationResult.bIsValid) {
-          if (!validationResults.aValidDocuments.includes('invitation_letter')) {
-            validationResults.aValidDocuments.push('invitation_letter')
-          }
-        }
-      }
-
-      if (visaTypeName === 'Student') {
-        const feeReceiptResult = await validateFeeReceipt(updatedDocuments)
-        if (!feeReceiptResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'fee_receipt'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = feeReceiptResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('fee_receipt')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'fee_receipt',
-              sReason: feeReceiptResult.sReason
-            })
-          }
-        }
-
-        const academicCertResult = await validateAcademicCertificate(updatedDocuments)
-        if (!academicCertResult.bIsValid) {
-          validationResults.bIsValid = false
-          const existingInvalidIndex = validationResults.aInvalidDocuments.findIndex(
-            doc => doc.sDocumentType === 'academic_certificate'
-          )
-          if (existingInvalidIndex >= 0) {
-            validationResults.aInvalidDocuments[existingInvalidIndex].sReason = academicCertResult.sReason
-          } else {
-            const validIndex = validationResults.aValidDocuments.indexOf('academic_certificate')
-            if (validIndex >= 0) {
-              validationResults.aValidDocuments.splice(validIndex, 1)
-            }
-            validationResults.aInvalidDocuments.push({
-              sDocumentType: 'academic_certificate',
-              sReason: academicCertResult.sReason
-            })
-          }
-        }
-      }
-
-      application.aDocuments = updatedDocuments
-      application.oValidationResult = validationResults
-      application.eStatus = validationResults.bIsValid ? 'Validated' : 'Rejected'
-      await application.save()
+      const validationResults = await performValidation(application)
 
       return res.status(status.OK).json({
         status: status.OK,
